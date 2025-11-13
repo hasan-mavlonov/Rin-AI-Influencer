@@ -1,0 +1,81 @@
+{
+  "selfie_arm": {
+    "type": "selfie",
+    "camera_distance_cm": "30-45",
+    "angle": ["slightly above eye level", "slightly tilted", "straight-on casual"],
+    "framing": "head and shoulders close-up, phone visible or implied",
+    "expression": ["soft smile", "neutral cute", "playful"],
+    "hands": "one hand holding phone",
+    "motion": ["slight hair movement", "soft natural skin texture"]
+  },
+
+  "selfie_mirror": {
+    "type": "selfie",
+    "camera_distance_cm": "150-200 (mirror)",
+    "angle": ["eye level", "slightly low angle"],
+    "framing": "mirror selfie, waist-up or full-body but close framing",
+    "expression": ["neutral", "confident", "small smile"],
+    "hands": "holding phone in front",
+    "motion": ["slight pose shift", "relaxed posture"]
+  },
+
+  "selfie_coffee": {
+    "type": "selfie",
+    "camera_distance_cm": "35-55",
+    "angle": ["slightly tilted", "above eye level"],
+    "framing": "close-up or half-body selfie with coffee held",
+    "expression": ["soft smile", "awake and cozy"],
+    "hands": "holding coffee close to face",
+    "motion": ["gentle, relaxed"]
+  },
+
+  "selfie_bed": {
+    "type": "selfie",
+    "camera_distance_cm": "30-45",
+    "angle": ["straight-on", "slight top angle"],
+    "framing": "close-up cozy morning selfie",
+    "expression": ["relaxed", "cute sleepy"],
+    "hands": "holding phone or lying near face",
+    "motion": ["hair messy natural", "soft fabric background"]
+  },
+
+  "selfie_gym": {
+    "type": "selfie",
+    "camera_distance_cm": "150-200 (mirror)",
+    "angle": ["eye level"],
+    "framing": "mirror selfie, fitness outfit, waist-up or full-body but close",
+    "expression": ["confident", "focused"],
+    "hands": "holding phone in front",
+    "motion": ["slight flex", "gym lighting reflections"]
+  },
+
+  "street_walk_close": {
+    "type": "friend",
+    "camera_distance_m": "1.0-1.8",
+    "angle": ["slightly low angle", "eye level"],
+    "framing": "waist-up, close framing",
+    "expression": ["laughing", "looking sideways", "natural smile"],
+    "hands": "holding bag, waving, swinging naturally",
+    "motion": ["mid-step", "hair movement", "light fabric motion"]
+  },
+
+  "street_wall_lean": {
+    "type": "friend",
+    "camera_distance_m": "1.0-2.0",
+    "angle": ["eye level"],
+    "framing": "waist-up portrait against wall",
+    "expression": ["soft smile", "calm confidence"],
+    "hands": "hand in pocket or touching hair",
+    "motion": ["relaxed posture", "slight breeze"]
+  },
+
+  "cafe_sit_waist": {
+    "type": "friend",
+    "camera_distance_m": "1.0-1.6",
+    "angle": ["eye level", "slight top-down"],
+    "framing": "waist-up, seated at table",
+    "expression": ["cozy", "soft smile", "calm"],
+    "hands": "holding cup or resting on table",
+    "motion": ["warm indoor light", "relaxed vibe"]
+  }
+}

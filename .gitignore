@@ -1,0 +1,11 @@
+.env
+*.log
+.venv/
+__pycache__/
+assets/images/generated/
+assets/images/references/
+data/scene_memory.json
+rin.db
+.idea/
+.runtime/
+logs/
