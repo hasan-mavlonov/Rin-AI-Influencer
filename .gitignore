@@ -9,3 +9,12 @@ rin.db
 .idea/
 .runtime/
 logs/
+.auth/
+assets/
+datasets/
+generators/assets/
+json/
+mimetypes/
+personas/rin/posts/
+random/
+time/
