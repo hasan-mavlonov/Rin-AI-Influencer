@@ -25,7 +25,7 @@ def create_realworld_post(persona_name: str):
     caption = generate_caption(persona_name, idea, place)
 
     # Step 4: Generate image (Gemini)
-    image_path = generate_image(persona_name, idea)
+    image_path = generate_image(persona_name, idea, place)
 
     # Step 5: Save post
     with get_session() as session:
@@ -89,7 +89,8 @@ def create_post_draft(persona_name: str, idea: str | None = None, existing_image
         log.warning(f"[Manual Mode] Using existing image → {image_path}")
     else:
         log.info("🎨 Generating new image based on Rin’s aesthetic and mood...")
-        image_path = generate_image(persona_name, idea)
+        image_path = generate_image(persona_name, idea, place)
+
 
     # 3. Save to database
     with get_session() as session:

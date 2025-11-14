@@ -1,6 +1,4 @@
-# generators/image_gen.py
-
-import os, time, json, random
+import os, time, json, random, io
 from pathlib import Path
 from PIL import Image, ImageEnhance
 from typing import Optional
@@ -14,12 +12,12 @@ from generators.photo_fetcher import download_reference_images
 log = get_logger("ImageGen")
 
 REF_DIR = Path("personas/rin/examples")
-
-
-# ----------------------------
-# HELPERS
-# ----------------------------
 from google.genai.types import Part
+
+
+# ----------------------------
+# Upload helpers
+# ----------------------------
 
 def _as_part(path: Path):
     mime = "image/jpeg"
@@ -36,75 +34,93 @@ def _upload_persona(client, p: Path):
     return client.files.upload(file=str(p))
 
 
+# ----------------------------
+# Enhancement filter
+# ----------------------------
 
 def _apply_filter(path: Path):
     try:
         img = Image.open(path).convert("RGB")
-        img = ImageEnhance.Color(img).enhance(0.98)
-        img = ImageEnhance.Contrast(img).enhance(1.02)
+        img = ImageEnhance.Color(img).enhance(1.02)
+        img = ImageEnhance.Contrast(img).enhance(1.03)
+        img = ImageEnhance.Brightness(img).enhance(1.01)
         img.save(path)
     except:
         pass
     return path
 
 
-def _pick_pose():
-    """Much more varied blogger-style poses"""
-    poses = [
-        # SELFIE VARIANTS
-        "arm-length selfie, slightly tilted phone angle, face + shoulders in frame",
-        "front camera selfie with hair slightly messy from wind",
-        "seated selfie, casual, phone slightly below eye level",
-        "walking selfie with motion blur on background",
-        "mirror selfie but HAND NOT covering face, phone partially blocking cheek",
+# ----------------------------
+# 4:5 Crop
+# ----------------------------
 
-        # FRIEND SHOT CLOSE
-        "friend-taken candid from 1.5 meters, waist-up, natural walk",
-        "friend-taken portrait, standing relaxed, one hand fixing hair",
-        "friend shot from low angle but subtle (not dramatic), 2 meters",
-        "leaning on railing, friend shot, soft smile",
-        "looking slightly away from camera, candid moment",
+def _instagram_crop(img: Image.Image) -> Image.Image:
+    target_ratio = 4 / 5
+    w, h = img.size
+    current_ratio = w / h
+
+    if abs(current_ratio - target_ratio) < 0.03:
+        return img
+
+    # Crop width (most common)
+    new_width = int(h * target_ratio)
+    if new_width < w:
+        left = (w - new_width) // 2
+        right = left + new_width
+        return img.crop((left, 0, right, h))
+
+    # Crop height
+    new_height = int(w / target_ratio)
+    top = (h - new_height) // 2
+    bottom = top + new_height
+    return img.crop((0, top, w, bottom))
+
+
+# ----------------------------
+# Aesthetic randomization
+# ----------------------------
+
+def _pick_pose():
+    poses = [
+        "natural portrait orientation selfie, phone slightly tilted, shoulders visible",
+        "friend-taken portrait 4:5, standing relaxed, soft smile",
+        "portrait walking shot, phone held by friend, motion in background",
+        "leaning against railing, portrait shot, natural daylight",
+        "portrait shot looking slightly away, candid style"
     ]
     return random.choice(poses)
 
 
 def _imperfections():
-    """Real Instagram bloggers ALWAYS have imperfections."""
     imperfections = [
-        "slight hand shake",
-        "soft natural grain",
-        "tiny flyaway hair strands",
-        "subtle uneven lighting on face",
-        "slight blur on one edge",
-        "minor color noise from indoor lights",
+        "slight natural grain",
+        "tiny hair strands out of place",
+        "soft light falloff on one side",
+        "minor background blur inconsistency",
+        "slight shadow unevenness"
     ]
     return random.choice(imperfections)
 
 
 def _environment_variation():
-    """Avoid empty-looking fake rooms."""
     env = [
-        "include people naturally in background, slightly blurred",
-        "include pedestrians walking behind her",
-        "include 1–2 gym visitors casually in background",
-        "include street shops and signs with real Chinese text",
-        "include café customers working on laptops",
-        "include cars passing softly blurred",
-        "include joggers by the river in far background"
+        "include natural ambient people in background, softly blurred",
+        "include pedestrians and street shops behind her",
+        "include café interior with customers working",
+        "include river promenade with joggers",
+        "include soft traffic blur from passing cars"
     ]
     return random.choice(env)
 
 
 def _clothing_variation():
-    """Force Rin to not always wear pastel top + leggings."""
     outfits = [
-        "soft pastel sweater with jeans",
-        "cream blazer over simple top",
-        "pink hoodie + ponytail casual look",
+        "pastel sweater with jeans",
+        "cream blazer and soft top",
+        "pink hoodie, hair tied casually",
         "white crop top + denim skirt",
-        "athleisure set but different color palette",
-        "oversized knitted sweater with tote bag",
-        "casual streetwear jacket with slim jeans",
+        "athleisure set in a different color palette",
+        "oversized sweater with tote bag"
     ]
     return random.choice(outfits)
 
@@ -117,46 +133,38 @@ def generate_image(persona_name: str, idea: str, place: Optional[dict] = None) -
     persona = json.loads(Path(f"personas/{persona_name}/persona.json").read_text())
     base_prompt = build_image_prompt(persona, idea, place)
 
-    is_selfie = random.random() < 0.75  # Reduce selfie dominance a bit
-
-    # always allow referencing real background
     bg_refs = download_reference_images(
         place.get("keywords", []),
         max_images=3
     ) if place else []
 
-    # extra realism signals
     pose = _pick_pose()
     imperf = _imperfections()
     env = _environment_variation()
     outfit = _clothing_variation()
 
-    camera = (
-        "iPhone 15 Pro front camera, close framing, strong natural realism."
-        if is_selfie else
-        "iPhone 15 Pro rear camera, handheld by friend at 1.5–2 meters."
-    )
-
     full_prompt = f"""
 {base_prompt}
 
-Camera: {camera}
+Generate a portrait orientation photograph.
+Aspect ratio: 4:5 portrait. 
+It must look like a real iPhone 15 Pro photo.
+
+STYLE REQUIREMENTS:
+- Absolutely NO text, NO captions, NO words, NO numbers anywhere in the image.
+- No signs, logos, or readable letters in the background.
+- Skin texture must be natural, not smooth or plastic.
+- Real shadows, natural lighting, handheld realism.
+- Avoid dramatic or cinematic lighting.
+- Avoid studio perfection. Keep it natural.
+
+SCENE STYLE:
 Pose: {pose}
-Outfit variation: {outfit}
+Outfit: {outfit}
+Background style: {env}
+Small natural imperfections: {imperf}
 
-Realism rules:
-- MUST look like a real human photo.
-- Skin texture visible, no plastic smoothing.
-- {imperf}
-- {env}
-- Real shadows, real reflections, correct perspective.
-- DO NOT make empty rooms.
-- DO NOT use perfect studio lighting.
-- DO NOT use cinematic vibes.
-- DO NOT make symmetrical composition.
-- Color grading must be natural iPhone look.
-
-The background MUST match the real-world location {place.get("name")} from {place.get("keywords")}.
+Make it look like a real Instagram lifestyle blogger photo.
 """
 
     if not Config.GEMINI_API_KEY:
@@ -164,18 +172,17 @@ The background MUST match the real-world location {place.get("name")} from {plac
 
     client = genai.Client(api_key=Config.GEMINI_API_KEY)
 
-    # Upload persona reference images
     persona_refs = sorted(list(REF_DIR.glob("*")))[:3]
-    # Build parts for Gemini
-    contents = [full_prompt]
 
-    # 1. PERSONA grounding ALWAYS FIRST
+    contents = [full_prompt]
     for p in persona_refs:
         contents.append(_upload_persona(client, p))
-
-    # 2. BACKGROUND grounding AFTER
     for r in bg_refs:
         contents.append(_as_part(Path(r)))
+
+    # ----------------------------
+    # GEMINI REQUEST
+    # ----------------------------
 
     response = client.models.generate_content(
         model="gemini-2.5-flash-image",
@@ -183,7 +190,16 @@ The background MUST match the real-world location {place.get("name")} from {plac
     )
 
     part = next(p for p in response.parts if getattr(p, "inline_data", None))
-    img = part.as_image()
+
+    # PROPER PIL conversion:
+    img = Image.open(io.BytesIO(part.inline_data.data))
+
+    # ----------------------------
+    # POSTPROCESS: 4:5 + resize
+    # ----------------------------
+
+    img = _instagram_crop(img)
+    img = img.resize((1080, 1350), Image.LANCZOS)
 
     out = Path("assets/images/generated") / f"rin_{int(time.time())}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
