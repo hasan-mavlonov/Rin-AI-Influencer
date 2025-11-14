@@ -64,7 +64,7 @@ def _instagram_crop(img: Image.Image) -> Image.Image:
     if abs(current_ratio - target_ratio) < 0.03:
         return img
 
-    # Crop width (most common)
+    # Crop width
     new_width = int(h * target_ratio)
     if new_width < w:
         left = (w - new_width) // 2
@@ -79,36 +79,159 @@ def _instagram_crop(img: Image.Image) -> Image.Image:
 
 
 # ----------------------------
-# Deterministic variation helpers
+# Deterministic variation helpers (NEW VERSION)
 # ----------------------------
 
-POSE_SEQUENCE = [
-    {
-        "prompt": "natural portrait orientation selfie, phone slightly tilted, shoulders visible",
-        "pose_key": "selfie_arm",
-        "min_confidence": 0.0,
-    },
-    {
-        "prompt": "portrait shot looking slightly away, candid style",
-        "pose_key": "selfie_coffee",
-        "min_confidence": 0.1,
-    },
-    {
-        "prompt": "leaning against railing, portrait shot, natural daylight",
-        "pose_key": "street_wall_lean",
-        "min_confidence": 0.45,
-    },
-    {
-        "prompt": "friend-taken portrait 4:5, standing relaxed, soft smile",
-        "pose_key": "cafe_sit_waist",
-        "min_confidence": 0.45,
-    },
-    {
-        "prompt": "portrait walking shot, phone held by friend, motion in background",
-        "pose_key": "street_walk_close",
-        "min_confidence": 0.8,
-    },
-]
+DEFAULT_CATEGORY = "selfie_morning"
+
+CATEGORY_POSES = {
+    "selfie_morning": [
+        {
+            "prompt": "relaxed morning selfie, soft natural light, shoulders visible",
+            "pose_key": "selfie_arm",
+            "min_confidence": 0.0,
+        },
+        {
+            "prompt": "coffee-in-hand selfie, cozy vibe, candid smile",
+            "pose_key": "selfie_coffee",
+            "min_confidence": 0.15,
+        },
+    ],
+    "selfie_gym": [
+        {
+            "prompt": "gym mirror selfie, toned posture, confident expression",
+            "pose_key": "selfie_gym",
+            "min_confidence": 0.0,
+        },
+        {
+            "prompt": "post-workout mirror selfie, relaxed smile",
+            "pose_key": "selfie_mirror",
+            "min_confidence": 0.2,
+        },
+    ],
+    "selfie_mirror": [
+        {
+            "prompt": "elevator mirror selfie, waist-up framing",
+            "pose_key": "selfie_mirror",
+            "min_confidence": 0.0,
+        },
+        {
+            "prompt": "close mirror selfie, playful tilt",
+            "pose_key": "selfie_arm",
+            "min_confidence": 0.1,
+        },
+    ],
+    "street_casual": [
+        {
+            "prompt": "friend-taken waist-up street portrait, relaxed smile",
+            "pose_key": "street_wall_lean",
+            "min_confidence": 0.2,
+        },
+        {
+            "prompt": "street walking candid, mid-step motion, joyful",
+            "pose_key": "street_walk_close",
+            "min_confidence": 0.55,
+        },
+        {
+            "prompt": "handheld selfie outside, city behind",
+            "pose_key": "selfie_arm",
+            "min_confidence": 0.0,
+        },
+    ],
+    "cozy_night": [
+        {
+            "prompt": "cozy indoor selfie, soft evening light",
+            "pose_key": "selfie_bed",
+            "min_confidence": 0.0,
+        },
+        {
+            "prompt": "close-up coffee table selfie, warm lamp glow",
+            "pose_key": "selfie_coffee",
+            "min_confidence": 0.0,
+        },
+    ],
+}
+
+CATEGORY_ENVIRONMENTS = {
+    "selfie_morning": [
+        {
+            "text": "warm daylight from the side, hints of {location} in soft focus",
+            "min_confidence": 0.0,
+        },
+        {
+            "text": "morning café interior near {location}, blurred patrons behind",
+            "min_confidence": 0.35,
+        },
+    ],
+    "selfie_gym": [
+        {
+            "text": "mirrored gym interior at {location}, equipment softly blurred",
+            "min_confidence": 0.0,
+        },
+        {
+            "text": "fitness studio lighting with cool reflections and gym signage",
+            "min_confidence": 0.45,
+        },
+    ],
+    "selfie_mirror": [
+        {
+            "text": "mirror reflections showing outfit and {location} details",
+            "min_confidence": 0.0,
+        },
+        {
+            "text": "elevator interior with city lights reflected",
+            "min_confidence": 0.35,
+        },
+    ],
+    "street_casual": [
+        {
+            "text": "tree-lined street near {location}, boutique storefronts blurred",
+            "min_confidence": 0.0,
+        },
+        {
+            "text": "dynamic Shanghai street energy at {location}, passersby softly blurred",
+            "min_confidence": 0.55,
+        },
+    ],
+    "cozy_night": [
+        {
+            "text": "warm desk lamp glow, laptop or books in background, {location} vibes",
+            "min_confidence": 0.0,
+        },
+        {
+            "text": "soft LED lighting with city night outside window",
+            "min_confidence": 0.45,
+        },
+    ],
+}
+
+CATEGORY_OUTFITS = {
+    "selfie_morning": [
+        "pastel cropped cardigan and high-waist jeans",
+        "light knit sweater with pleated skirt",
+        "casual athleisure set with warm-up jacket",
+    ],
+    "selfie_gym": [
+        "matching sports bra and leggings, subtle sheen",
+        "two-tone athletic set with zip-up hoodie",
+        "black and blush gym set with towel over shoulder",
+    ],
+    "selfie_mirror": [
+        "sleek pastel blazer over fitted top",
+        "monochrome outfit with statement boots",
+        "oversized hoodie with mini skirt",
+    ],
+    "street_casual": [
+        "cream blazer layered over crop top and denim",
+        "flowy blouse with tailored shorts and tote bag",
+        "techwear windbreaker with pleated skirt",
+    ],
+    "cozy_night": [
+        "soft loungewear set with fuzzy socks",
+        "oversized sweater dress with blanket throw",
+        "silky pajama top with messy bun",
+    ],
+}
 
 IMPERFECTION_SEQUENCE = [
     "slight natural grain",
@@ -118,38 +241,10 @@ IMPERFECTION_SEQUENCE = [
     "slight shadow unevenness",
 ]
 
-ENVIRONMENT_SEQUENCE = [
-    {
-        "text": "include natural ambient people in background, softly blurred",
-        "min_confidence": 0.0,
-    },
-    {
-        "text": "include pedestrians and street shops behind her",
-        "min_confidence": 0.45,
-    },
-    {
-        "text": "include café interior with customers working",
-        "min_confidence": 0.35,
-    },
-    {
-        "text": "include river promenade with joggers",
-        "min_confidence": 0.65,
-    },
-    {
-        "text": "include soft traffic blur from passing cars",
-        "min_confidence": 0.8,
-    },
-]
 
-OUTFIT_SEQUENCE = [
-    "pastel sweater with jeans",
-    "cream blazer and soft top",
-    "pink hoodie, hair tied casually",
-    "white crop top + denim skirt",
-    "athleisure set in a different color palette",
-    "oversized sweater with tote bag",
-]
-
+# ----------------------------
+# Selection logic
+# ----------------------------
 
 def _load_pose_library() -> dict:
     poses_path = Path("personas/rin/poses.json")
@@ -183,6 +278,7 @@ def _select_with_confidence(
     options: list[dict],
     confidence: float,
 ) -> tuple[dict, bool]:
+
     if not options:
         return ({}, False)
 
@@ -193,13 +289,76 @@ def _select_with_confidence(
         state.advance(key, len(options))
         return option, True
 
-    # Fallback to the safest option available without advancing the cycle.
     for candidate in options:
         if confidence >= candidate.get("min_confidence", 0.0):
             return candidate, False
 
-    # If nothing qualifies, return the first option.
     return options[0], False
+
+
+def _infer_category(place: Optional[dict], idea: str) -> str:
+    if place:
+        shot_category = place.get("shot_category")
+        if shot_category in CATEGORY_POSES:
+            return shot_category
+
+    idea_lower = idea.lower()
+    keywords = (place or {}).get("keywords", [])
+    joined = " ".join(keywords).lower()
+
+    if any(k in idea_lower or k in joined for k in ["gym", "workout", "leg day", "training"]):
+        return "selfie_gym"
+    if any(k in idea_lower or k in joined for k in ["mirror", "elevator"]):
+        return "selfie_mirror"
+    if any(k in idea_lower or k in joined for k in ["night", "late", "evening", "cozy", "sleep"]):
+        return "cozy_night"
+    if any(k in idea_lower or k in joined for k in ["street", "walk", "wander", "city", "outside"]):
+        return "street_casual"
+
+    return DEFAULT_CATEGORY
+
+
+def _resolve_pose(state: VariationState, category: str, confidence: float):
+    options = CATEGORY_POSES.get(category) or CATEGORY_POSES[DEFAULT_CATEGORY]
+    key = f"pose:{category}"
+    return _select_with_confidence(state, key, options, confidence)
+
+
+def _resolve_environment(state: VariationState, category: str, confidence: float, place: Optional[dict]):
+    options = CATEGORY_ENVIRONMENTS.get(category) or CATEGORY_ENVIRONMENTS[DEFAULT_CATEGORY]
+    env_option, _ = _select_with_confidence(
+        state, f"environment:{category}", options, confidence
+    )
+    location = (place or {}).get("name") or "the location"
+    text = env_option.get("text", "")
+    return text.format(location=location)
+
+
+def _resolve_outfit(state: VariationState, category: str) -> str:
+    outfits = CATEGORY_OUTFITS.get(category) or CATEGORY_OUTFITS[DEFAULT_CATEGORY]
+    return _cycle_text(state, f"outfit:{category}", outfits)
+
+
+def _score_reference(path: Path) -> int:
+    try:
+        with Image.open(path) as img:
+            width, height = img.size
+        return width * height
+    except Exception:
+        try:
+            return int(path.stat().st_size)
+        except OSError:
+            return 0
+
+
+def _top_reference_images(directory: Path, limit: int = 3) -> list[Path]:
+    refs = []
+    for p in directory.glob("*"):
+        if p.is_file():
+            refs.append((p, _score_reference(p)))
+
+    refs.sort(key=lambda item: item[1], reverse=True)
+    return [p for p, _ in refs[:limit]]
 
 
 # ----------------------------
@@ -219,20 +378,18 @@ def generate_image(persona_name: str, idea: str, place: Optional[dict] = None) -
     confidence = _background_confidence(bg_refs, place)
     log.debug(f"Background confidence → {confidence:.2f} (refs={len(bg_refs)})")
 
-    pose_option, pose_advanced = _select_with_confidence(
-        state, "pose", POSE_SEQUENCE, confidence
-    )
-    pose = pose_option.get("prompt", "natural portrait orientation selfie, phone slightly tilted, shoulders visible")
+    category = _infer_category(place, idea)
+    log.debug(f"Pose category → {category}")
 
-    env_option, _ = _select_with_confidence(
-        state, "environment", ENVIRONMENT_SEQUENCE, confidence
-    )
-    env = env_option.get(
-        "text", "include natural ambient people in background, softly blurred"
+    pose_option, pose_advanced = _resolve_pose(state, category, confidence)
+    pose = pose_option.get(
+        "prompt",
+        "natural portrait orientation selfie, phone slightly tilted, shoulders visible",
     )
 
+    env = _resolve_environment(state, category, confidence, place)
     imperf = _cycle_text(state, "imperfection", IMPERFECTION_SEQUENCE)
-    outfit = _cycle_text(state, "outfit", OUTFIT_SEQUENCE)
+    outfit = _resolve_outfit(state, category)
 
     pose_library = _load_pose_library()
     pose_spec = pose_library.get(pose_option.get("pose_key", ""))
@@ -243,14 +400,14 @@ def generate_image(persona_name: str, idea: str, place: Optional[dict] = None) -
         advance=pose_advanced,
     )
 
-    # Persist variation progress now that selections are finalized.
+    # save variation state
     state.save()
 
     full_prompt = f"""
 {base_prompt}
 
 Generate a portrait orientation photograph.
-Aspect ratio: 4:5 portrait. 
+Aspect ratio: 4:5 portrait.
 It must look like a real iPhone 15 Pro photo.
 
 STYLE REQUIREMENTS:
@@ -266,9 +423,17 @@ Pose: {pose}
 Outfit: {outfit}
 Background style: {env}
 Small natural imperfections: {imperf}
-
-Make it look like a real Instagram lifestyle blogger photo.
 """
+
+    if place:
+        location_name = place.get('name', '')
+        location_desc = place.get('description', '')
+        location_line = location_name
+        if location_desc:
+            location_line += f" — {location_desc}"
+        full_prompt += f"\nLocation inspiration: {location_line}"
+
+    full_prompt += "\nMake it look like a real Instagram lifestyle blogger photo."
 
     if camera_instructions:
         full_prompt += f"\nCamera direction: {camera_instructions}"
@@ -278,7 +443,7 @@ Make it look like a real Instagram lifestyle blogger photo.
 
     client = genai.Client(api_key=Config.GEMINI_API_KEY)
 
-    persona_refs = sorted(list(REF_DIR.glob("*")))[:3]
+    persona_refs = _top_reference_images(REF_DIR, limit=3)
 
     contents = [full_prompt]
     for p in persona_refs:
@@ -286,23 +451,13 @@ Make it look like a real Instagram lifestyle blogger photo.
     for r in bg_refs:
         contents.append(_as_part(Path(r)))
 
-    # ----------------------------
-    # GEMINI REQUEST
-    # ----------------------------
-
     response = client.models.generate_content(
         model="gemini-2.5-flash-image",
         contents=contents
     )
 
     part = next(p for p in response.parts if getattr(p, "inline_data", None))
-
-    # PROPER PIL conversion:
     img = Image.open(io.BytesIO(part.inline_data.data))
-
-    # ----------------------------
-    # POSTPROCESS: 4:5 + resize
-    # ----------------------------
 
     img = _instagram_crop(img)
     img = img.resize((1080, 1350), Image.LANCZOS)
