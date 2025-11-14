@@ -64,7 +64,7 @@ def _instagram_crop(img: Image.Image) -> Image.Image:
     if abs(current_ratio - target_ratio) < 0.03:
         return img
 
-    # Crop width (most common)
+    # Crop width
     new_width = int(h * target_ratio)
     if new_width < w:
         left = (w - new_width) // 2
@@ -79,7 +79,7 @@ def _instagram_crop(img: Image.Image) -> Image.Image:
 
 
 # ----------------------------
-# Deterministic variation helpers
+# Deterministic variation helpers (NEW VERSION)
 # ----------------------------
 
 DEFAULT_CATEGORY = "selfie_morning"
@@ -242,6 +242,10 @@ IMPERFECTION_SEQUENCE = [
 ]
 
 
+# ----------------------------
+# Selection logic
+# ----------------------------
+
 def _load_pose_library() -> dict:
     poses_path = Path("personas/rin/poses.json")
     try:
@@ -274,6 +278,7 @@ def _select_with_confidence(
     options: list[dict],
     confidence: float,
 ) -> tuple[dict, bool]:
+
     if not options:
         return ({}, False)
 
@@ -284,12 +289,10 @@ def _select_with_confidence(
         state.advance(key, len(options))
         return option, True
 
-    # Fallback to the safest option available without advancing the cycle.
     for candidate in options:
         if confidence >= candidate.get("min_confidence", 0.0):
             return candidate, False
 
-    # If nothing qualifies, return the first option.
     return options[0], False
 
 
@@ -315,33 +318,24 @@ def _infer_category(place: Optional[dict], idea: str) -> str:
     return DEFAULT_CATEGORY
 
 
-def _resolve_pose(
-    state: VariationState,
-    category: str,
-    confidence: float,
-) -> tuple[dict, bool]:
+def _resolve_pose(state: VariationState, category: str, confidence: float):
     options = CATEGORY_POSES.get(category) or CATEGORY_POSES[DEFAULT_CATEGORY]
     key = f"pose:{category}"
     return _select_with_confidence(state, key, options, confidence)
 
 
-def _resolve_environment(
-    state: VariationState,
-    category: str,
-    confidence: float,
-    place: Optional[dict],
-) -> str:
-    options = CATEGORY_ENVIRONMENTS.get(category) or CATEGORY_ENVIRONMENTS.get(DEFAULT_CATEGORY, [])
+def _resolve_environment(state: VariationState, category: str, confidence: float, place: Optional[dict]):
+    options = CATEGORY_ENVIRONMENTS.get(category) or CATEGORY_ENVIRONMENTS[DEFAULT_CATEGORY]
     env_option, _ = _select_with_confidence(
         state, f"environment:{category}", options, confidence
     )
     location = (place or {}).get("name") or "the location"
-    text = env_option.get("text", "include natural ambient people in background, softly blurred")
+    text = env_option.get("text", "")
     return text.format(location=location)
 
 
 def _resolve_outfit(state: VariationState, category: str) -> str:
-    outfits = CATEGORY_OUTFITS.get(category) or CATEGORY_OUTFITS.get(DEFAULT_CATEGORY, [])
+    outfits = CATEGORY_OUTFITS.get(category) or CATEGORY_OUTFITS[DEFAULT_CATEGORY]
     return _cycle_text(state, f"outfit:{category}", outfits)
 
 
@@ -386,6 +380,7 @@ def generate_image(persona_name: str, idea: str, place: Optional[dict] = None) -
 
     category = _infer_category(place, idea)
     log.debug(f"Pose category → {category}")
+
     pose_option, pose_advanced = _resolve_pose(state, category, confidence)
     pose = pose_option.get(
         "prompt",
@@ -393,7 +388,6 @@ def generate_image(persona_name: str, idea: str, place: Optional[dict] = None) -
     )
 
     env = _resolve_environment(state, category, confidence, place)
-
     imperf = _cycle_text(state, "imperfection", IMPERFECTION_SEQUENCE)
     outfit = _resolve_outfit(state, category)
 
@@ -406,7 +400,7 @@ def generate_image(persona_name: str, idea: str, place: Optional[dict] = None) -
         advance=pose_advanced,
     )
 
-    # Persist variation progress now that selections are finalized.
+    # save variation state
     state.save()
 
     full_prompt = f"""
@@ -429,7 +423,6 @@ Pose: {pose}
 Outfit: {outfit}
 Background style: {env}
 Small natural imperfections: {imperf}
-
 """
 
     if place:
@@ -458,23 +451,13 @@ Small natural imperfections: {imperf}
     for r in bg_refs:
         contents.append(_as_part(Path(r)))
 
-    # ----------------------------
-    # GEMINI REQUEST
-    # ----------------------------
-
     response = client.models.generate_content(
         model="gemini-2.5-flash-image",
         contents=contents
     )
 
     part = next(p for p in response.parts if getattr(p, "inline_data", None))
-
-    # PROPER PIL conversion:
     img = Image.open(io.BytesIO(part.inline_data.data))
-
-    # ----------------------------
-    # POSTPROCESS: 4:5 + resize
-    # ----------------------------
 
     img = _instagram_crop(img)
     img = img.resize((1080, 1350), Image.LANCZOS)
