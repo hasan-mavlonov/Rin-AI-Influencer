@@ -77,7 +77,7 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
 
 if __name__ == "__main__":
     # Run one full cycle
-    run_post_cycle("rin", auto_post=False, headless=False)
+    run_post_cycle("rin", auto_post=True, headless=False)
 
     # To post automatically (headless Chrome):
     # run_post_cycle("rin", auto_post=True, headless=True)
