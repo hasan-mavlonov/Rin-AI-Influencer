@@ -21,8 +21,24 @@ def _save(data):
     _STATE.write_text(json.dumps(data))
 
 
+def _identity_sentence(persona: Dict) -> str:
+    display_name = persona.get("display_name") or persona.get("id", "Rin")
+    appearance = persona.get("appearance", {})
+
+    def _val(key: str) -> str:
+        return appearance.get(key) or "unspecified"
+
+    return (
+        f"{display_name}'s hair: {_val('hair')}; "
+        f"eyes: {_val('eyes')}; "
+        f"skin tone: {_val('skin_tone')}; "
+        f"distinct features: {_val('distinct_features')}; "
+        f"expression: {_val('facial_expression')}."
+    )
+
+
 def build_image_prompt(persona: Dict, idea: str, place: Optional[Dict] = None) -> str:
-    """Basic personality → idea → location description."""
+    """Basic personality → identity sentence → idea → location description."""
     st = _load()
     st["cycle"] += 1
     _save(st)
@@ -35,10 +51,18 @@ def build_image_prompt(persona: Dict, idea: str, place: Optional[Dict] = None) -
     desc = (place or {}).get("description", "")
     kws = ", ".join((place or {}).get("keywords", [])[:6])
 
+    identity_sentence = _identity_sentence(persona)
+    display_name = persona.get("display_name") or persona.get("id", "Rin")
+    negative_clause = (
+        f"Do not change {display_name}'s facial structure, eye color, or signature hairstyle."
+    )
+
     return (
         f"{base}, casual lifestyle influencer in Shanghai. "
+        f"{identity_sentence} "
         f"Location: {loc}. {desc} "
         f"Style keywords: {style}. "
         f"Post idea: {idea}. "
-        f"Scene hints: {kws}."
+        f"Scene hints: {kws}. "
+        f"{negative_clause}"
     )
