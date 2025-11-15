@@ -47,13 +47,15 @@ def create_realworld_post(persona_name: str):
 
     post_json_path = Path(f"personas/{persona_name}/posts/{post.id}_{idea.replace(' ', '_')}.json")
     post_json_path.parent.mkdir(parents=True, exist_ok=True)
-    json.dump({
+    post_payload = {
         "idea": idea,
         "location": place,
         "refs": refs,
         "caption": caption,
         "image_path": image_path
-    }, open(post_json_path, "w", encoding="utf-8"), ensure_ascii=False, indent=4)
+    }
+    with open(post_json_path, "w", encoding="utf-8") as fh:
+        json.dump(post_payload, fh, ensure_ascii=False, indent=4)
 
     log.info(f"✅ Rin’s real-world post saved → {post_json_path}")
     return post_json_path
