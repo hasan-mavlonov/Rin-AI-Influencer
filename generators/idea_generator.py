@@ -3,6 +3,7 @@
 import json
 import random
 import re
+from typing import Optional
 from openai import OpenAI
 from core.config import Config
 from core.logger import get_logger
@@ -31,24 +32,34 @@ RARE_SPOTS = [
 ]
 
 
+_WHITESPACE_RE = re.compile(r"\s+")
+_TOKEN_RE = re.compile(r"[a-z]+")
+_JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
+
+
 def _normalized(s):
-    return re.sub(r"\s+", " ", (s or "").lower().strip())
+    return _WHITESPACE_RE.sub(" ", (s or "").lower().strip())
 
 
-def _too_similar(s, recent):
+def _tokenize(text: Optional[str]) -> set[str]:
+    if not text:
+        return set()
+    return set(_TOKEN_RE.findall(text))
+
+
+def _too_similar(s, recent_tokens):
     cand = _normalized(s)
     if any(p in cand for p in BANNED_PHRASES):
         return True
-    tokens = set(re.findall(r"[a-z]+", cand))
-    for r in recent:
-        rt = set(re.findall(r"[a-z]+", _normalized(r)))
+    tokens = _tokenize(cand)
+    for rt in recent_tokens:
         if tokens and len(tokens & rt) / max(1, len(tokens)) > 0.6:
             return True
     return False
 
 
 def _extract_json(txt):
-    m = re.search(r"\{.*\}", txt, re.DOTALL)
+    m = _JSON_OBJECT_RE.search(txt)
     if not m:
         raise ValueError("no json")
     return json.loads(m.group(0))
@@ -73,7 +84,7 @@ SEEDS = {
 
 def generate_idea(persona_name: str) -> tuple[str, dict]:
     posts = load_recent_posts(persona_name, limit=5)
-    recent = [p.get("idea") for p in posts if p.get("idea")]
+    recent_tokens = [_tokenize(_normalized(p.get("idea"))) for p in posts if p.get("idea")]
 
     category = _pick_shot_category()
     base_seed = random.choice(SEEDS[category])
@@ -96,7 +107,7 @@ Return ONLY the idea phrase.
             max_tokens=16,
         )
         cand = res.choices[0].message.content.strip()
-        if not _too_similar(cand, recent):
+        if not _too_similar(cand, recent_tokens):
             idea = cand
             break
 

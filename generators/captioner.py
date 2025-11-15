@@ -1,10 +1,11 @@
 # generators/captioner.py
 
-from personas.loader import load_persona, load_recent_posts
+from personas.loader import load_recent_posts
 from openai import OpenAI
 from core.config import Config
 from core.logger import get_logger
 import random
+from utils.persona_cache import get_persona
 
 log = get_logger("Captioner")
 
@@ -22,7 +23,7 @@ def _mock(persona, idea):
 
 
 def generate_caption(persona_name: str, idea: str, place=None) -> str:
-    persona = load_persona(persona_name)
+    persona = get_persona(persona_name)
     posts = load_recent_posts(persona_name, limit=5)
     prev = "\n".join([p.get("caption") for p in posts if p.get("caption")]) or ""
 
