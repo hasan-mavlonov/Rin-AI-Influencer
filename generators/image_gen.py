@@ -31,14 +31,24 @@ def _as_part(path: Path):
     if path.suffix.lower() == ".png":
         mime = "image/png"
 
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        log.warning(f"Failed to read background reference {path}: {exc}")
+        return None
+
     return Part.from_bytes(
-        data=path.read_bytes(),
+        data=data,
         mime_type=mime
     )
 
 
 def _upload_persona(client, p: Path):
-    return client.files.upload(file=str(p))
+    try:
+        return client.files.upload(file=str(p))
+    except Exception as exc:  # noqa: BLE001 - SDK raises diverse errors.
+        log.warning(f"Failed to upload persona reference {p}: {exc}")
+        return None
 
 
 # ----------------------------
@@ -264,7 +274,12 @@ def _load_pose_library() -> dict:
 @lru_cache(maxsize=8)
 def _load_persona(persona_name: str) -> dict:
     persona_path = Path(f"personas/{persona_name}/persona.json")
-    return json.loads(persona_path.read_text(encoding="utf-8"))
+    try:
+        raw = persona_path.read_text(encoding="utf-8")
+        return json.loads(raw)
+    except (OSError, json.JSONDecodeError) as exc:
+        log.error(f"Unable to load persona data for '{persona_name}': {exc}")
+        return {}
 
 
 def _background_confidence(bg_refs: list[str], place: Optional[dict]) -> float:
@@ -464,22 +479,52 @@ Small natural imperfections: {imperf}
     if camera_instructions:
         full_prompt += f"\nCamera direction: {camera_instructions}"
 
-    client = _get_genai_client()
+    try:
+        client = _get_genai_client()
+    except Exception as exc:  # noqa: BLE001 - bubble up with clearer context.
+        log.error(f"Gemini client unavailable: {exc}")
+        raise
 
     persona_refs = _top_reference_images(REF_DIR, limit=3)
 
     contents = [full_prompt]
     for p in persona_refs:
-        contents.append(_upload_persona(client, p))
+        ref_part = _upload_persona(client, p)
+        if ref_part is not None:
+            contents.append(ref_part)
     for r in bg_refs:
-        contents.append(_as_part(Path(r)))
+        bg_part = _as_part(Path(r))
+        if bg_part is not None:
+            contents.append(bg_part)
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash-image",
-        contents=contents
-    )
+    attempts = 2
+    last_error: Exception | None = None
+    response = None
+    for attempt in range(1, attempts + 1):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash-image",
+                contents=contents
+            )
+            break
+        except Exception as exc:  # noqa: BLE001 - capture SDK/network issues.
+            last_error = exc
+            log.warning(
+                "Gemini image attempt %s/%s failed: %s",
+                attempt,
+                attempts,
+                exc,
+            )
+            if attempt < attempts:
+                time.sleep(2)
 
-    part = next(p for p in response.parts if getattr(p, "inline_data", None))
+    if response is None:
+        raise RuntimeError(f"Image generation failed: {last_error}")
+
+    try:
+        part = next(p for p in response.parts if getattr(p, "inline_data", None))
+    except StopIteration as exc:
+        raise RuntimeError("Image generation response missing binary data.") from exc
     img = Image.open(io.BytesIO(part.inline_data.data))
 
     img = _instagram_crop(img)
