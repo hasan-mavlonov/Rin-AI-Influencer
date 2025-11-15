@@ -7,25 +7,19 @@ from typing import Dict, Optional
 _STATE = Path(".runtime/image_variation_state.json")
 
 
-def _load():
-    if _STATE.exists():
-        try:
-            return json.loads(_STATE.read_text())
-        except:
-            pass
-    return {"cycle": 0}
-
-
-def _save(data):
-    _STATE.parent.mkdir(parents=True, exist_ok=True)
-    _STATE.write_text(json.dumps(data))
-
-
 def build_image_prompt(persona: Dict, idea: str, place: Optional[Dict] = None) -> str:
     """Persona framing without facial description + idea + location context."""
-    st = _load()
+    if _STATE.exists():
+        try:
+            st = json.loads(_STATE.read_text())
+        except Exception:
+            st = {"cycle": 0}
+    else:
+        st = {"cycle": 0}
+
     st["cycle"] += 1
-    _save(st)
+    _STATE.parent.mkdir(parents=True, exist_ok=True)
+    _STATE.write_text(json.dumps(st))
 
     appearance = persona.get("appearance", {})
     style = ", ".join(appearance.get("aesthetic_keywords", []))
