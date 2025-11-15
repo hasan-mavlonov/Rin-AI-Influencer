@@ -6,7 +6,7 @@ import re
 from openai import OpenAI
 from core.config import Config
 from core.logger import get_logger
-from personas.loader import load_persona, load_recent_posts
+from personas.loader import load_recent_posts
 
 log = get_logger("IdeaGen")
 client = OpenAI(api_key=Config.OPENAI_API_KEY)
