@@ -3,8 +3,9 @@ import argparse
 from core.logger import get_logger
 from core.structure import ensure_structure
 from core.database import init_db
-from personas.loader import load_persona, validate_persona
+from personas.loader import validate_persona
 from core.publisher import publish_to_instagram
+from utils.persona_cache import get_persona
 
 log = get_logger("Rin")
 
@@ -12,7 +13,7 @@ def boot():
     log.info("Booting Rin AI Influencer Agent 🌙✨")
     ensure_structure()
     init_db()
-    persona = load_persona("rin")
+    persona = get_persona("rin")
     validate_persona(persona)
     log.info(f"Persona loaded: {persona['display_name']} ({persona['id']})")
     log.info("System ready ✅")

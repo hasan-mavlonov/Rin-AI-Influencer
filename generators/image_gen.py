@@ -1,7 +1,10 @@
-import time, json, io
+import io
+import json
+import time
 from pathlib import Path
 from PIL import Image, ImageEnhance
 from typing import Optional
+from functools import lru_cache
 from google import genai
 
 from core.config import Config
@@ -15,6 +18,8 @@ log = get_logger("ImageGen")
 
 REF_DIR = Path("personas/rin/examples")
 from google.genai.types import Part
+
+_REFERENCE_CACHE: dict[tuple[str, int], tuple[Path, ...]] = {}
 
 
 # ----------------------------
@@ -246,6 +251,7 @@ IMPERFECTION_SEQUENCE = [
 # Selection logic
 # ----------------------------
 
+@lru_cache(maxsize=1)
 def _load_pose_library() -> dict:
     poses_path = Path("personas/rin/poses.json")
     try:
@@ -253,6 +259,12 @@ def _load_pose_library() -> dict:
     except Exception as exc:
         log.warning(f"Unable to load pose library: {exc}")
         return {}
+
+
+@lru_cache(maxsize=8)
+def _load_persona(persona_name: str) -> dict:
+    persona_path = Path(f"personas/{persona_name}/persona.json")
+    return json.loads(persona_path.read_text(encoding="utf-8"))
 
 
 def _background_confidence(bg_refs: list[str], place: Optional[dict]) -> float:
@@ -352,13 +364,27 @@ def _score_reference(path: Path) -> int:
 
 
 def _top_reference_images(directory: Path, limit: int = 3) -> list[Path]:
+    key = (str(directory), limit)
+    cached = _REFERENCE_CACHE.get(key)
+    if cached is not None:
+        return list(cached)
+
     refs = []
     for p in directory.glob("*"):
         if p.is_file():
             refs.append((p, _score_reference(p)))
 
     refs.sort(key=lambda item: item[1], reverse=True)
-    return [p for p, _ in refs[:limit]]
+    result = tuple(p for p, _ in refs[:limit])
+    _REFERENCE_CACHE[key] = result
+    return list(result)
+
+
+@lru_cache(maxsize=1)
+def _get_genai_client():
+    if not Config.GEMINI_API_KEY:
+        raise RuntimeError("Missing GEMINI_API_KEY")
+    return genai.Client(api_key=Config.GEMINI_API_KEY)
 
 
 # ----------------------------
@@ -366,7 +392,7 @@ def _top_reference_images(directory: Path, limit: int = 3) -> list[Path]:
 # ----------------------------
 
 def generate_image(persona_name: str, idea: str, place: Optional[dict] = None) -> str:
-    persona = json.loads(Path(f"personas/{persona_name}/persona.json").read_text())
+    persona = _load_persona(persona_name)
     base_prompt = build_image_prompt(persona, idea, place)
 
     bg_refs = download_reference_images(
@@ -438,10 +464,7 @@ Small natural imperfections: {imperf}
     if camera_instructions:
         full_prompt += f"\nCamera direction: {camera_instructions}"
 
-    if not Config.GEMINI_API_KEY:
-        raise RuntimeError("Missing GEMINI_API_KEY")
-
-    client = genai.Client(api_key=Config.GEMINI_API_KEY)
+    client = _get_genai_client()
 
     persona_refs = _top_reference_images(REF_DIR, limit=3)
 

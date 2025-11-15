@@ -6,7 +6,7 @@ from core.logger import get_logger
 from generators.captioner import generate_caption
 from generators.idea_generator import generate_idea
 from generators.image_gen import generate_image
-from personas.loader import load_persona
+from utils.persona_cache import get_persona
 from poster.instagram_poster import post_feed
 
 log = get_logger("PostCycle")
@@ -18,7 +18,7 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
     Rin becomes fully autonomous here.
     """
     start = time.time()
-    persona = load_persona(persona_name)
+    persona = get_persona(persona_name)
     log.info(f"🚀 Starting autonomous post cycle for {persona['display_name']}...")
 
     # Step 1: Generate idea & location
