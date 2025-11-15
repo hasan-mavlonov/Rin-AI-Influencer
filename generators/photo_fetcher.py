@@ -1,11 +1,14 @@
 # generators/photo_fetcher.py
 
-import requests
-import json
 import difflib
-from pathlib import Path
+import json
+import time
 from datetime import datetime
+from pathlib import Path
 from threading import Lock
+
+import requests
+from requests import RequestException
 
 from core.config import Config
 from core.logger import get_logger
@@ -45,10 +48,13 @@ def _load_memory() -> dict:
 
 def _save_memory(memory: dict):
     global _MEMORY_CACHE
-    MEMORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with MEMORY_PATH.open("w", encoding="utf-8") as fh:
-        json.dump(memory, fh, ensure_ascii=False, indent=4)
-    _MEMORY_CACHE = memory
+    try:
+        MEMORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with MEMORY_PATH.open("w", encoding="utf-8") as fh:
+            json.dump(memory, fh, ensure_ascii=False, indent=4)
+        _MEMORY_CACHE = memory
+    except OSError as exc:
+        log.warning(f"Failed to save scene memory: {exc}")
 
 
 def _find_similar_scene(memory: dict, query: str) -> str | None:
@@ -67,12 +73,29 @@ def _download_from_pexels(query: str, max_images=2) -> list[str]:
     url = f"https://api.pexels.com/v1/search?query={query}&per_page={max_images}"
     headers = {"Authorization": Config.PEXELS_API_KEY}
 
-    try:
-        res = session.get(url, headers=headers, timeout=10)
-        res.raise_for_status()
-        data = res.json()
-    except Exception as e:
-        log.error(f"Pexels API failed: {e}")
+    data: dict[str, object] | None = None
+    retries = 3
+    for attempt in range(1, retries + 1):
+        try:
+            res = session.get(url, headers=headers, timeout=10)
+            res.raise_for_status()
+            data = res.json()
+            break
+        except RequestException as exc:
+            log.warning(
+                "Pexels API attempt %s/%s failed: %s",
+                attempt,
+                retries,
+                exc,
+            )
+            if attempt < retries:
+                time.sleep(1.0)
+        except ValueError as exc:
+            log.error(f"Invalid JSON from Pexels API: {exc}")
+            return []
+
+    if data is None:
+        log.error("Pexels API failed after retries; skipping reference download.")
         return []
 
     paths = []
@@ -87,8 +110,8 @@ def _download_from_pexels(query: str, max_images=2) -> list[str]:
             path.write_bytes(img_data)
             paths.append(str(path))
             log.info(f"Downloaded background → {path}")
-        except Exception:
-            pass
+        except (KeyError, RequestException, OSError) as exc:
+            log.debug(f"Skipping failed background download: {exc}")
 
     return paths
 

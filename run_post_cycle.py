@@ -19,12 +19,28 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
     """
     start = time.time()
     persona = get_persona(persona_name)
-    log.info(f"🚀 Starting autonomous post cycle for {persona['display_name']}...")
+    if not persona:
+        log.error(f"Persona '{persona_name}' could not be loaded; aborting cycle.")
+        return {
+            "idea": None,
+            "place": None,
+            "caption": None,
+            "image": None,
+            "posted": False,
+        }
+
+    display_name = persona.get("display_name", persona_name)
+    log.info(f"🚀 Starting autonomous post cycle for {display_name}...")
 
     # Step 1: Generate idea & location
     idea, place = generate_idea(persona_name)
     log.info(f"🧠 Idea: {idea}")
-    log.info(f"📍 Location: {place['name']} — {place['description']}")
+    location_name = (place or {}).get("name", "")
+    location_desc = (place or {}).get("description", "")
+    location_line = (
+        f"{location_name} — {location_desc}" if location_desc else location_name or "Unknown"
+    )
+    log.info(f"📍 Location: {location_line}")
 
     # Step 2: Generate single image ✅ pass `place`
     log.info("🎨 Generating image...")
@@ -51,17 +67,20 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
         # Save preview file (not uploaded)
         log.info("💡 Preview mode: post not uploaded automatically.")
         preview_dir = Path("assets/preview")
-        preview_dir.mkdir(parents=True, exist_ok=True)
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        meta_path = preview_dir / f"{persona_name}_{ts}.txt"
-        meta_path.write_text(
-            f"Idea: {idea}\n\n"
-            f"Location: {place['name']} — {place['description']}\n\n"
-            f"Caption:\n{caption}\n\n"
-            f"Image:\n{img_path}",
-            encoding="utf-8",
-        )
-        log.info(f"🗂️ Preview saved → {meta_path}")
+        try:
+            preview_dir.mkdir(parents=True, exist_ok=True)
+            ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            meta_path = preview_dir / f"{persona_name}_{ts}.txt"
+            meta_path.write_text(
+                f"Idea: {idea}\n\n"
+                f"Location: {location_line}\n\n"
+                f"Caption:\n{caption}\n\n"
+                f"Image:\n{img_path}",
+                encoding="utf-8",
+            )
+            log.info(f"🗂️ Preview saved → {meta_path}")
+        except OSError as exc:
+            log.error(f"Failed to save preview metadata: {exc}")
 
     end = time.time()
     log.info(f"✨ Cycle complete in {end - start:.2f}s.")

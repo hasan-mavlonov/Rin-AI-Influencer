@@ -46,8 +46,11 @@ def _schedule_post(scheduler: BackgroundScheduler, post_time: datetime, label: s
         except Exception as e:  # noqa: BLE001 - logging the error suffices here.
             log.error(f"❌ Post failed: {e}")
 
-    scheduler.add_job(_task, trigger=DateTrigger(run_date=post_time))
-    log.info(f"📅 Scheduled {label} post for {post_time.strftime('%H:%M')}")
+    try:
+        scheduler.add_job(_task, trigger=DateTrigger(run_date=post_time))
+        log.info(f"📅 Scheduled {label} post for {post_time.strftime('%H:%M')}")
+    except Exception as exc:  # noqa: BLE001 - APScheduler may raise various errors.
+        log.error(f"Failed to schedule {label} post at {post_time}: {exc}")
 
 
 def plan_day(scheduler: BackgroundScheduler) -> None:
@@ -67,18 +70,32 @@ def start_dynamic_scheduler() -> None:
     """Main entry point used by CLIs to launch the background scheduler."""
 
     scheduler = BackgroundScheduler(timezone=TIMEZONES)
-    scheduler.start()
+    try:
+        scheduler.start()
+    except Exception as exc:  # noqa: BLE001 - ensure failure is surfaced cleanly.
+        log.error(f"Failed to start scheduler: {exc}")
+        return
 
-    # Plan immediately for today.
-    plan_day(scheduler)
+    try:
+        plan_day(scheduler)
+    except Exception as exc:  # noqa: BLE001 - keep scheduler alive on planning issues.
+        log.error(f"Initial planning failed: {exc}")
 
-    # Re-plan daily at 00:05 AM.
-    scheduler.add_job(plan_day, "cron", hour=0, minute=5, args=[scheduler])
-    log.info("🕛 Daily re-planning set for 00:05 every day.")
+    try:
+        scheduler.add_job(plan_day, "cron", hour=0, minute=5, args=[scheduler])
+        log.info("🕛 Daily re-planning set for 00:05 every day.")
+    except Exception as exc:  # noqa: BLE001 - cron setup should not crash runtime.
+        log.error(f"Failed to register daily re-planning job: {exc}")
 
     try:
         while True:
-            time.sleep(60)
+            try:
+                time.sleep(60)
+            except Exception as exc:  # noqa: BLE001 - keep loop resilient to OS signals.
+                log.warning(f"Scheduler sleep interrupted: {exc}")
     except KeyboardInterrupt:
         log.warning("🛑 Scheduler stopped manually.")
+    except Exception as exc:  # noqa: BLE001 - catch-all to avoid silent exits.
+        log.error(f"Scheduler loop terminated unexpectedly: {exc}")
+    finally:
         scheduler.shutdown(wait=False)

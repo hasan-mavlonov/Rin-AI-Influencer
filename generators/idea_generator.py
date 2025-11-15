@@ -3,14 +3,26 @@
 import json
 import random
 import re
+import time
 from typing import Optional
+
 from openai import OpenAI
+
 from core.config import Config
 from core.logger import get_logger
 from personas.loader import load_recent_posts
 
 log = get_logger("IdeaGen")
-client = OpenAI(api_key=Config.OPENAI_API_KEY)
+
+client: OpenAI | None = None
+if Config.OPENAI_API_KEY:
+    try:
+        client = OpenAI(api_key=Config.OPENAI_API_KEY)
+    except Exception as exc:  # noqa: BLE001 - third-party initialization.
+        log.error(f"Failed to initialize OpenAI client: {exc}")
+        client = None
+else:
+    log.warning("OPENAI_API_KEY missing; using fallback idea generation.")
 
 
 BANNED_PHRASES = {
@@ -99,17 +111,27 @@ Seed: "{base_seed}"
 Return ONLY the idea phrase.
 """
     idea = None
-    for _ in range(3):
-        res = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.9,
-            max_tokens=16,
-        )
-        cand = res.choices[0].message.content.strip()
-        if not _too_similar(cand, recent_tokens):
-            idea = cand
-            break
+    if client is not None:
+        for attempt in range(1, 4):
+            try:
+                res = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.9,
+                    max_tokens=16,
+                    timeout=30,
+                )
+                cand = res.choices[0].message.content.strip()
+                if not _too_similar(cand, recent_tokens):
+                    idea = cand
+                    break
+            except Exception as exc:  # noqa: BLE001 - API errors vary widely.
+                log.warning(
+                    "OpenAI idea attempt %s/3 failed: %s",
+                    attempt,
+                    exc,
+                )
+                time.sleep(1.5)
 
     if not idea:
         idea = base_seed
@@ -134,20 +156,38 @@ Return strict JSON:
  "shot_category": "{category}"
 }}
 """
-    res = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": place_prompt}],
-        temperature=0.8,
-        max_tokens=200,
-    )
+    place = None
+    raw = ""
+    if client is not None:
+        for attempt in range(1, 4):
+            try:
+                res = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": place_prompt}],
+                    temperature=0.8,
+                    max_tokens=200,
+                    timeout=30,
+                )
+                raw = res.choices[0].message.content.strip()
+                break
+            except Exception as exc:  # noqa: BLE001 - keep fallback path alive.
+                log.warning(
+                    "OpenAI location attempt %s/3 failed: %s",
+                    attempt,
+                    exc,
+                )
+                time.sleep(1.5)
 
-    raw = res.choices[0].message.content.strip()
-    try:
-        place = _extract_json(raw)
-        nn = _normalized(place["name"])
-        if nn in BANNED_LOCATIONS:
-            raise ValueError
-    except Exception:
+    if raw:
+        try:
+            place = _extract_json(raw)
+            nn = _normalized(place["name"])
+            if nn in BANNED_LOCATIONS:
+                raise ValueError
+        except Exception as exc:  # noqa: BLE001 - fallback to deterministic data.
+            log.warning(f"Falling back to preset location due to parsing error: {exc}")
+
+    if not place:
         name = random.choice(RARE_SPOTS)
         place = {
             "name": name,
