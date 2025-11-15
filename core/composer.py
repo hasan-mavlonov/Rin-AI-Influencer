@@ -8,11 +8,9 @@ from models import PostDraft
 from generators.captioner import generate_caption
 from generators.image_gen import generate_image
 from generators.idea_generator import generate_idea
+from generators.photo_fetcher import download_reference_images
 
 log = get_logger("Composer")
-
-from generators.photo_fetcher import download_reference_images
-from generators.idea_generator import generate_idea
 
 def create_realworld_post(persona_name: str):
     # Step 1: Idea + location
