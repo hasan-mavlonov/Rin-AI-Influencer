@@ -1,245 +1,146 @@
-import os
+"""Instagram posting helpers that rely on the Instagram Graph API instead of browser automation."""
+from __future__ import annotations
+
 import time
 from pathlib import Path
-from typing import Optional, Dict, Any
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeoutError
-from core.logger import get_logger
+from typing import Dict, Any
+
+import requests
+
 from core.config import Config
+from core.logger import get_logger
 
 log = get_logger("IGPoster")
 
-INSTAGRAM_URL = "https://www.instagram.com/"
-STATE_DIR = Path(".auth")
-STATE_PATH = STATE_DIR / "instagram_state.json"
+GRAPH_API_VERSION = "v19.0"
+GRAPH_API_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 
 
-def _proxy_config() -> Optional[Dict[str, Any]]:
-    proxy = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
-    if proxy:
-        return {"server": proxy}
-    return None
+class InstagramAPIError(RuntimeError):
+    """Raised when the Instagram Graph API responds with an error payload."""
 
 
-def _ensure_state_dir():
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _login_if_needed(page) -> None:
-    username = Config.INSTAGRAM_USERNAME
-    password = Config.INSTAGRAM_PASSWORD
-    if not username or not password:
-        raise RuntimeError("Missing INSTAGRAM_USERNAME or INSTAGRAM_PASSWORD in .env")
-
-    log.info("Checking if already logged in...")
-    try:
-        if page.locator("svg[aria-label='Home']").first.is_visible(timeout=3000) \
-           or page.locator("input[placeholder*='Search']").first.is_visible(timeout=3000) \
-           or "stories" in page.content():
-            log.info("Already logged in (session detected).")
-            return
-    except Exception:
-        pass
-
-    log.info("Session not detected — trying manual login.")
-    page.goto(f"{INSTAGRAM_URL}accounts/login/", timeout=60000)
-
-    try:
-        page.wait_for_selector("input[name='username']", timeout=20000)
-    except Exception:
-        log.warning("Could not find username field; page may be blocked or redirected.")
-        return
-
-    page.fill("input[name='username']", username)
-    page.fill("input[name='password']", password)
-    page.click("button[type='submit']")
-
-    try:
-        page.wait_for_selector("input[placeholder*='Search']", timeout=20000)
-        log.info("Login successful.")
-    except Exception:
-        log.warning("Login may need manual confirmation (2FA or challenge).")
-
-    page.context.storage_state(path=str(STATE_PATH))
-    log.info(f"Session state saved → {STATE_PATH}")
-
-
-def ensure_logged_in(headless: bool = True) -> None:
-    _ensure_state_dir()
-    with sync_playwright() as p:
-        proxy_cfg = _proxy_config()
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(STATE_DIR),
-            headless=headless,
-            **({"proxy": proxy_cfg} if proxy_cfg else {})
+def _credentials() -> tuple[str, str]:
+    access_token = Config.INSTAGRAM_ACCESS_TOKEN
+    account_id = Config.INSTAGRAM_BUSINESS_ACCOUNT_ID
+    if not access_token or not account_id:
+        raise RuntimeError(
+            "Missing Instagram Graph API credentials. "
+            "Set INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_BUSINESS_ACCOUNT_ID in your .env file."
         )
-        page = context.new_page()
-        page.goto(INSTAGRAM_URL, timeout=60000)
-        _login_if_needed(page)
-        context.close()
+    return access_token, account_id
 
 
-def post_feed(image_path: str, caption: str, headless: bool = True) -> Dict[str, Any]:
-    _ensure_state_dir()
-    image_abs = str(Path(image_path).resolve())
-    if not Path(image_abs).exists():
-        raise FileNotFoundError(f"Image not found: {image_abs}")
+def ensure_logged_in(headless: bool = True) -> None:  # noqa: ARG001 (API flow doesn't use browser)
+    """Kept for backwards compatibility with the old browser poster.
 
-    with sync_playwright() as p:
-        proxy_cfg = _proxy_config()
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(STATE_DIR),
-            headless=headless,
-            **({"proxy": proxy_cfg} if proxy_cfg else {})
-        )
-        page = context.new_page()
-        page.goto(INSTAGRAM_URL, timeout=60000)
+    The Graph API does not require a manual login, but we still verify credentials early so we can
+    surface actionable configuration errors before attempting to post.
+    """
 
-        _login_if_needed(page)
+    try:
+        _credentials()
+        log.info("Graph API credentials detected – ready to publish without browser automation.")
+    except RuntimeError as exc:
+        log.error(str(exc))
+        raise
 
-        # --- Open post creation ---
-        log.info("Opening Instagram 'New Post' dialog...")
-        clicked = False
-        for sel in [
-            "svg[aria-label='New post']",
-            "svg[aria-label='Create']",
-            "xpath=//div[contains(.,'Create')]",
-            "xpath=//span[contains(.,'Create')]",
-        ]:
-            try:
-                page.click(sel, timeout=4000)
-                clicked = True
-                break
-            except Exception:
-                continue
 
-        if not clicked:
-            try:
-                page.goto("https://www.instagram.com/create/select/", timeout=20000)
-                clicked = True
-            except Exception:
-                pass
+def _raise_for_response(resp: requests.Response) -> None:
+    try:
+        data = resp.json()
+    except ValueError:
+        data = {"error": {"message": resp.text or "Unknown error"}}
 
-        if not clicked:
-            context.close()
-            return {"status": "error", "error": "Could not open 'New post' dialog."}
+    if resp.status_code >= 400 or "error" in data:
+        error = data.get("error", {})
+        message = error.get("message", "Unknown Instagram Graph API error")
+        code = error.get("code")
+        raise InstagramAPIError(f"{message} (code={code})")
 
-        # --- Upload image ---
-        try:
-            log.info("Uploading image...")
-            file_input = page.wait_for_selector("input[type='file']", timeout=15000, state="attached")
-            file_input.set_input_files(image_abs)
-            log.info(f"✅ File uploaded → {image_abs}")
-        except Exception as e:
-            context.close()
-            return {"status": "error", "error": f"Upload failed: {e}"}
 
-        # --- Next buttons ---
-        # --- Step through Next buttons (Edit → Filter → Caption)
-        for step in range(2):
-            try:
-                log.info(f"🔹 Waiting for 'Next' button (step {step + 1})...")
-                next_button = page.wait_for_selector(
-                    "div[role='button']:has-text('Next'), button:has-text('Next')",
-                    timeout=15000
-                )
-                page.evaluate("el => el.scrollIntoView()", next_button)
-                time.sleep(1.5)
-                next_button.click()
-                log.info(f"✅ Clicked 'Next' (step {step + 1})")
-                time.sleep(4)
-            except PWTimeoutError:
-                log.warning(f"⚠️ Could not find 'Next' button on step {step + 1}")
-                break
+def _create_media_container(image_path: Path, caption: str, *, access_token: str, account_id: str) -> str:
+    endpoint = f"{GRAPH_API_BASE}/{account_id}/media"
+    with image_path.open("rb") as fp:
+        files = {"image_file": fp}
+        data = {
+            "caption": caption,
+            "access_token": access_token,
+        }
+        log.info("Uploading image bytes to Instagram Graph API...")
+        resp = requests.post(endpoint, data=data, files=files, timeout=120)
+    _raise_for_response(resp)
+    media_id = resp.json()["id"]
+    log.info(f"✅ Media container created: {media_id}")
+    return media_id
 
-        # --- Caption ---
-        try:
-            caption_field = page.wait_for_selector("div[role='textbox']", timeout=10000)
-            caption_field.click()
-            caption_field.fill(caption)
-            log.info("✅ Caption added successfully.")
-        except Exception as e:
-            log.warning(f"Caption entry failed: {e}")
 
-        # --- Share post ---
-        shared = False
-        try:
-            log.info("🔹 Locating the correct 'Share' button inside the Create Post dialog...")
+def _publish_media(media_id: str, *, access_token: str, account_id: str) -> str:
+    endpoint = f"{GRAPH_API_BASE}/{account_id}/media_publish"
+    data = {
+        "creation_id": media_id,
+        "access_token": access_token,
+    }
+    resp = requests.post(endpoint, data=data, timeout=60)
+    _raise_for_response(resp)
+    publish_id = resp.json()["id"]
+    log.info(f"🚀 Publish job triggered: {publish_id}")
+    return publish_id
 
-            # Wait for the Share button to appear inside the active dialog
-            share_button = page.wait_for_selector(
-                "div[role='dialog'] div[role='button'] >> text=Share",
-                timeout=15000
-            )
 
-            # Scroll into view and wait a moment for Instagram to enable it
-            page.evaluate("(el) => el.scrollIntoView()", share_button)
-            time.sleep(1.5)
+def _poll_status(media_id: str, *, access_token: str) -> str:
+    endpoint = f"{GRAPH_API_BASE}/{media_id}"
+    params = {
+        "fields": "status_code,status",
+        "access_token": access_token,
+    }
+    for attempt in range(15):
+        resp = requests.get(endpoint, params=params, timeout=30)
+        _raise_for_response(resp)
+        data = resp.json()
+        status_code = data.get("status_code") or data.get("status")
+        if status_code in {"FINISHED", "FINISHED_SUCCESS"}:
+            return "success"
+        if status_code in {"ERROR", "ERROR_UNKNOWN", "FAILED"}:
+            raise InstagramAPIError(f"Media container failed to process (status={status_code}).")
+        time.sleep(2 + attempt * 0.5)
+    log.warning("Timed out waiting for Instagram to finish processing media container.")
+    return "pending"
 
-            # Ensure the button isn't disabled
-            try:
-                page.wait_for_function(
-                    """() => {
-                        const btns = Array.from(document.querySelectorAll('div[role="dialog"] div[role="button"]'));
-                        const share = btns.find(b => b.textContent.trim() === 'Share');
-                        return share && !share.getAttribute('aria-disabled');
-                    }""",
-                    timeout=10000
-                )
-            except Exception:
-                log.warning("⚠️ Share button might still be disabled, attempting click anyway.")
 
-            share_button.click()
-            log.info("✅ Clicked correct 'Share' button (within Create dialog).")
-            shared = True
+def post_feed(image_path: str, caption: str, headless: bool = True) -> Dict[str, Any]:  # noqa: ARG001
+    """Publish a photo to Instagram using the official Graph API.
 
-        except PWTimeoutError:
-            log.warning("⚠️ Could not find the correct 'Share' button inside Create dialog.")
-        except Exception as e:
-            log.error(f"Unexpected error while sharing: {e}")
+    Args:
+        image_path: Local filesystem path to the image to upload.
+        caption: Text caption for the post.
+        headless: Preserved for backwards compatibility; ignored by the API flow.
 
-        if not shared:
-            context.close()
-            return {"status": "error", "error": "Failed to click Share (wrong modal or missing button)."}
+    Returns:
+        Dictionary describing whether the publish attempt succeeded.
+    """
 
-        # --- Wait for confirmation ---
-        log.info("⏳ Waiting for post upload to complete...")
-        failed = False
-        try:
-            page.wait_for_selector("div[role='dialog']", state="detached", timeout=45000)
-            log.info("✅ Upload completed (modal closed).")
+    path = Path(image_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Image not found: {path}")
 
-            # Wait briefly for an error toast; if none appears, assume success
-            try:
-                page.wait_for_selector("text=Couldn’t upload", timeout=3000)
-                failed = True
-                log.warning("❌ Instagram reported an upload failure.")
-            except PWTimeoutError:
-                failed = False
-        except PWTimeoutError:
-            log.warning("⚠️ Modal did not close — upload uncertain.")
+    access_token, account_id = _credentials()
 
-        page.screenshot(path="assets/last_instagram_screen.png")
-        log.info("📸 Saved debug screenshot → assets/last_instagram_screen.png")
+    try:
+        media_id = _create_media_container(path, caption, access_token=access_token, account_id=account_id)
+        publish_id = _publish_media(media_id, access_token=access_token, account_id=account_id)
+        status = _poll_status(media_id, access_token=access_token)
+    except InstagramAPIError as exc:
+        log.error(str(exc))
+        return {"status": "error", "error": str(exc)}
+    except requests.RequestException as exc:
+        log.error(f"Network error talking to Instagram Graph API: {exc}")
+        return {"status": "error", "error": "Network error communicating with Instagram."}
 
-        if not failed:
-            # Stronger success signal: modal closed & no error toast
-            context.close()
-            return {"status": "success", "detail": "Posted to feed successfully."}
-
-        # Fallback check: try to detect feed/home icon
-        try:
-            if page.locator("svg[aria-label='Home']").is_visible(timeout=3000):
-                context.close()
-                return {"status": "success", "detail": "Posted to feed successfully."}
-        except Exception:
-            pass
-
-        log.warning("⚠️ No clear upload confirmation.")
-        context.close()
-        return {"status": "pending", "detail": "Upload uncertain, check screenshot."}
+    detail = "Posted to feed successfully." if status == "success" else "Publish pending confirmation."
+    return {"status": status, "detail": detail, "publish_id": publish_id, "creation_id": media_id}
 
 
 if __name__ == "__main__":
-    print("🔐 Launching Instagram login verification...")
-    ensure_logged_in(headless=False)
-    print("✅ Session check complete — ready to post.")
+    ensure_logged_in()
+    print("Ready to post via Instagram Graph API.")
