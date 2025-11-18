@@ -14,6 +14,7 @@ log = get_logger("IGPoster")
 
 GRAPH_API_VERSION = "v19.0"
 GRAPH_API_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
+TEMP_IMAGE_UPLOAD_ENDPOINT = "https://catbox.moe/user/api.php"
 
 
 class InstagramAPIError(RuntimeError):
@@ -59,16 +60,36 @@ def _raise_for_response(resp: requests.Response) -> None:
         raise InstagramAPIError(f"{message} (code={code})")
 
 
+def _upload_temp_image(image_path: Path) -> str:
+    """Upload the image to a temporary hosting service accessible by Instagram."""
+
+    with image_path.open("rb") as fp:
+        files = {"fileToUpload": (image_path.name, fp)}
+        data = {"reqtype": "fileupload"}
+        log.info("Uploading media to temporary host for Graph API ingestion...")
+        resp = requests.post(TEMP_IMAGE_UPLOAD_ENDPOINT, data=data, files=files, timeout=120)
+
+    if resp.status_code >= 400:
+        raise InstagramAPIError("Failed to upload media to temporary host.")
+
+    url = resp.text.strip()
+    if not url.startswith("http"):
+        raise InstagramAPIError("Temporary host did not return a valid URL for the uploaded media.")
+
+    log.info(f"☁️ Media available at {url}")
+    return url
+
+
 def _create_media_container(image_path: Path, caption: str, *, access_token: str, account_id: str) -> str:
     endpoint = f"{GRAPH_API_BASE}/{account_id}/media"
-    with image_path.open("rb") as fp:
-        files = {"image_file": fp}
-        data = {
-            "caption": caption,
-            "access_token": access_token,
-        }
-        log.info("Uploading image bytes to Instagram Graph API...")
-        resp = requests.post(endpoint, data=data, files=files, timeout=120)
+    image_url = _upload_temp_image(image_path)
+    data = {
+        "caption": caption,
+        "image_url": image_url,
+        "access_token": access_token,
+    }
+    log.info("Creating Instagram media container with hosted image URL...")
+    resp = requests.post(endpoint, data=data, timeout=120)
     _raise_for_response(resp)
     media_id = resp.json()["id"]
     log.info(f"✅ Media container created: {media_id}")
