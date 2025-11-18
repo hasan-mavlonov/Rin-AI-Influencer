@@ -15,9 +15,9 @@ class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 
-    # Instagram credentials
-    INSTAGRAM_USERNAME = os.getenv("INSTAGRAM_USERNAME", "")
-    INSTAGRAM_PASSWORD = os.getenv("INSTAGRAM_PASSWORD", "")
+    # Instagram Graph API credentials
+    INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
+    INSTAGRAM_BUSINESS_ACCOUNT_ID = os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
 
     # Database
     DB_URL = os.getenv("DB_URL", f"sqlite:///{BASE_DIR}/rin.db")
