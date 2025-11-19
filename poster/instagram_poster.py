@@ -149,8 +149,21 @@ def post_feed(image_path: str, caption: str, headless: bool = True) -> Dict[str,
 
     try:
         media_id = _create_media_container(path, caption, access_token=access_token, account_id=account_id)
-        publish_id = _publish_media(media_id, access_token=access_token, account_id=account_id)
+
         status = _poll_status(media_id, access_token=access_token)
+        if status != "success":
+            detail = (
+                "Instagram is still processing the media container; "
+                "publish will be retried next cycle."
+            )
+            log.warning(detail)
+            return {
+                "status": status,
+                "detail": detail,
+                "creation_id": media_id,
+            }
+
+        publish_id = _publish_media(media_id, access_token=access_token, account_id=account_id)
     except InstagramAPIError as exc:
         log.error(str(exc))
         return {"status": "error", "error": str(exc)}
@@ -158,8 +171,8 @@ def post_feed(image_path: str, caption: str, headless: bool = True) -> Dict[str,
         log.error(f"Network error talking to Instagram Graph API: {exc}")
         return {"status": "error", "error": "Network error communicating with Instagram."}
 
-    detail = "Posted to feed successfully." if status == "success" else "Publish pending confirmation."
-    return {"status": status, "detail": detail, "publish_id": publish_id, "creation_id": media_id}
+    detail = "Posted to feed successfully."
+    return {"status": "success", "detail": detail, "publish_id": publish_id, "creation_id": media_id}
 
 
 if __name__ == "__main__":
