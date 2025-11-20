@@ -3,13 +3,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Dict, Any
-
-import requests
-
-from pathlib import Path
 from typing import Any, Dict
-import time
 
 import requests
 
@@ -18,7 +12,7 @@ from core.logger import get_logger
 
 log = get_logger("IGPoster")
 
-GRAPH_API_VERSION = "v19.0"
+GRAPH_API_VERSION = "v21.0"
 GRAPH_API_BASE = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 TEMP_IMAGE_UPLOAD_ENDPOINT = "https://catbox.moe/user/api.php"
 
@@ -154,6 +148,29 @@ def _poll_status(media_id: str, *, access_token: str) -> str:
         time.sleep(2 + attempt * 0.5)
     log.warning("Timed out waiting for Instagram to finish processing media container.")
     return "pending"
+
+
+def comment_on_media(media_id: str, text: str) -> Dict[str, Any]:
+    """Post a comment on a media object using the Graph API."""
+
+    if not text.strip():
+        raise ValueError("Comment text cannot be empty.")
+
+    access_token, _ = _credentials()
+    endpoint = f"{GRAPH_API_BASE}/{media_id}/comments"
+    data = {"message": text, "access_token": access_token}
+    try:
+        resp = requests.post(endpoint, data=data, timeout=20)
+        _raise_for_response(resp)
+    except InstagramAPIError:
+        raise
+    except requests.RequestException as exc:  # noqa: BLE001
+        raise InstagramAPIError(f"Network error posting comment: {exc}") from exc
+
+    payload = resp.json()
+    comment_id = payload.get("id")
+    log.info(f"💬 Comment created on {media_id}: {comment_id}")
+    return {"status": "success", "comment_id": comment_id or "unknown"}
 
 
 def post_feed(

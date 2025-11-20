@@ -12,7 +12,12 @@ from poster.instagram_poster import post_feed
 log = get_logger("PostCycle")
 
 
-def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = True):
+def run_post_cycle(
+    persona_name: str,
+    auto_post: bool = False,
+    headless: bool = True,
+    trigger_engagement: bool = False,
+):
     """
     Full pipeline: idea → 1 detailed photo → caption → (optional) Instagram post.
     Rin becomes fully autonomous here.
@@ -75,6 +80,18 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
                 log.warning(f"⚠️ Posting failed → {result}")
         except Exception as e:
             log.error(f"Instagram posting failed: {e}")
+        if trigger_engagement:
+            from engagement.engagement_engine import run_engagement_cycle
+
+            now_hour = datetime.now().hour
+            if 9 <= now_hour <= 22:
+                log.info("💬 Triggering a light engagement burst after posting.")
+                try:
+                    run_engagement_cycle()
+                except Exception as exc:  # noqa: BLE001
+                    log.error(f"Follow-up engagement failed: {exc}")
+            else:
+                log.info("Engagement skipped — outside daytime window.")
     else:
         # Save preview file (not uploaded)
         log.info("💡 Preview mode: post not uploaded automatically.")

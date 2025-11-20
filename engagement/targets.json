@@ -1,0 +1,12 @@
+[
+  {"username": "seesawcoffee", "category": "cafe", "district": "Jingan"},
+  {"username": "mannercoffee", "category": "cafe", "district": "Huangpu"},
+  {"username": "taikooli.sh", "category": "mall", "note": "Taikoo Li Qiantan"},
+  {"username": "txhuaihai", "category": "mall", "note": "TX Huaihai"},
+  {"username": "mixcshanghai", "category": "mall", "note": "The MixC"},
+  {"username": "veryshanghai", "category": "micro_influencer", "focus": "city"},
+  {"username": "beanthere_sh", "category": "cafe", "district": "Xuhui"},
+  {"username": "lizzyzhouphoto", "category": "photographer", "focus": "streets"},
+  {"username": "paperfaces", "category": "lifestyle", "focus": "calm"},
+  {"username": "quietshanghaiguide", "category": "micro_influencer", "focus": "hidden spots"}
+]
