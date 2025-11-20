@@ -1,4 +1,4 @@
-"""CLI-friendly entry point for launching the dynamic posting scheduler."""
+"""CLI-friendly entry point for launching the dynamic posting + engagement scheduler."""
 # Re-exports the real scheduler logic from core.scheduler for backward imports.
 
 from core.scheduler import plan_day, start_dynamic_scheduler

@@ -5,7 +5,7 @@ from sqlmodel import select
 from core.logger import get_logger
 from core.database import get_session
 from models import PostDraft, PostHistory
-from poster.instagram_poster import ensure_logged_in, post_feed
+from poster.instagram_poster import comment_on_media, ensure_logged_in, post_feed
 
 log = get_logger("Publisher")
 
@@ -58,3 +58,16 @@ def publish_to_instagram(draft_id: int | None = None, headless: bool = True) -> 
         return {"ok": True, "detail": resp.get("detail")}
     else:
         return {"ok": False, "error": resp.get("error", "Unknown error")}
+
+
+def publish_comment(media_id: str, text: str) -> dict:
+    """Lightweight helper to post a comment through the Graph API."""
+
+    ensure_logged_in()
+    try:
+        resp = comment_on_media(media_id, text)
+    except Exception as exc:  # noqa: BLE001 - surface cleanly to CLI users.
+        log.error(f"Failed to publish comment: {exc}")
+        return {"ok": False, "error": str(exc)}
+
+    return {"ok": resp.get("status") == "success", "comment_id": resp.get("comment_id")}

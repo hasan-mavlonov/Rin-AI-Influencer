@@ -19,6 +19,11 @@ class Config:
     INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
     INSTAGRAM_BUSINESS_ACCOUNT_ID = os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
 
+    # Engagement cadence tuning
+    ENGAGEMENT_MIN_DELAY_SECONDS = int(os.getenv("ENGAGEMENT_MIN_DELAY_SECONDS", "240"))
+    ENGAGEMENT_MAX_DELAY_SECONDS = int(os.getenv("ENGAGEMENT_MAX_DELAY_SECONDS", "720"))
+    ENGAGEMENT_ACCOUNT_COOLDOWN_HOURS = int(os.getenv("ENGAGEMENT_ACCOUNT_COOLDOWN_HOURS", "20"))
+
     # Database
     DB_URL = os.getenv("DB_URL", f"sqlite:///{BASE_DIR}/rin.db")
 
