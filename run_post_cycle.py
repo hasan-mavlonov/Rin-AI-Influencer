@@ -5,7 +5,7 @@ from pathlib import Path
 from core.logger import get_logger
 from generators.captioner import generate_caption
 from generators.idea_generator import generate_idea
-from generators.image_gen import create_motion_clip, generate_image
+from generators.image_gen import generate_image
 from utils.persona_cache import get_persona
 from poster.instagram_poster import post_feed
 
@@ -47,16 +47,13 @@ def run_post_cycle(
     )
     log.info(f"📍 Location: {location_line}")
 
-    # Step 2: Generate imagery (still + reel motion by default)
+    # Step 2: Generate imagery (still only)
     log.info("🎨 Generating image...")
     img_path = generate_image(persona_name, idea, place)
     log.info(f"🖼️ Image generated → {img_path}")
 
-    clip_path = create_motion_clip(img_path)
-    media_path = clip_path or img_path
-    media_type = "video" if clip_path else "image"
-    if clip_path:
-        log.info(f"🎞️ Reel-first asset prepared → {clip_path}")
+    media_path = img_path
+    media_type = "image"
 
     # Step 3: Generate caption (already passes `place`, keep as is)
     log.info("📝 Generating caption...")
@@ -71,7 +68,6 @@ def run_post_cycle(
                 media_path,
                 caption,
                 media_type=media_type,
-                cover_path=img_path if clip_path else None,
                 headless=headless,
             )
             if result.get("status") == "success":
