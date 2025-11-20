@@ -31,7 +31,13 @@ def publish_to_instagram(draft_id: int | None = None, headless: bool = True) -> 
     log.info(f"Preparing to post draft #{draft.id}: '{draft.idea}'")
     ensure_logged_in(headless=headless)
 
-    resp = post_feed(draft.image_path, draft.caption or "", headless=headless)
+    media_type = "video" if Path(draft.image_path).suffix.lower() in {".mp4", ".mov"} else "image"
+    resp = post_feed(
+        draft.image_path,
+        draft.caption or "",
+        media_type=media_type,
+        headless=headless,
+    )
     log.info(f"Instagram response: {resp}")
 
     if resp.get("status") == "success":

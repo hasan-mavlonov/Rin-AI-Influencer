@@ -1,5 +1,7 @@
 from typing import Optional
 
+from typing import Optional
+
 from generators.variation_state import VariationState
 
 
@@ -63,5 +65,14 @@ def get_camera_instructions(
     motion = _select_option(state, f"{base_key}:motion", pose.get("motion", []), advance)
     if motion:
         lines.append(f"Motion cues: {motion}.")
+
+    clip_motion = _select_option(
+        state,
+        f"{base_key}:clip",
+        pose.get("clip_motion", ["slow push-in for reel", "gentle pan left", "handheld sway"]),
+        advance,
+    )
+    if clip_motion:
+        lines.append(f"Clip pacing: {clip_motion}.")
 
     return " ".join(lines)

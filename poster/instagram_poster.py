@@ -7,6 +7,12 @@ from typing import Dict, Any
 
 import requests
 
+from pathlib import Path
+from typing import Any, Dict
+import time
+
+import requests
+
 from core.config import Config
 from core.logger import get_logger
 
@@ -60,11 +66,11 @@ def _raise_for_response(resp: requests.Response) -> None:
         raise InstagramAPIError(f"{message} (code={code})")
 
 
-def _upload_temp_image(image_path: Path) -> str:
-    """Upload the image to a temporary hosting service accessible by Instagram."""
+def _upload_temp_media(media_path: Path) -> str:
+    """Upload media (image or video) to a temporary host accessible by Instagram."""
 
-    with image_path.open("rb") as fp:
-        files = {"fileToUpload": (image_path.name, fp)}
+    with media_path.open("rb") as fp:
+        files = {"fileToUpload": (media_path.name, fp)}
         data = {"reqtype": "fileupload"}
         log.info("Uploading media to temporary host for Graph API ingestion...")
         resp = requests.post(TEMP_IMAGE_UPLOAD_ENDPOINT, data=data, files=files, timeout=120)
@@ -80,16 +86,37 @@ def _upload_temp_image(image_path: Path) -> str:
     return url
 
 
-def _create_media_container(image_path: Path, caption: str, *, access_token: str, account_id: str) -> str:
+def _create_media_container(
+    media_path: Path,
+    caption: str,
+    *,
+    access_token: str,
+    account_id: str,
+    media_type: str = "image",
+    cover_path: Path | None = None,
+) -> str:
     endpoint = f"{GRAPH_API_BASE}/{account_id}/media"
-    image_url = _upload_temp_image(image_path)
+    media_url = _upload_temp_media(media_path)
     data = {
         "caption": caption,
-        "image_url": image_url,
         "access_token": access_token,
     }
-    log.info("Creating Instagram media container with hosted image URL...")
-    resp = requests.post(endpoint, data=data, timeout=120)
+
+    if media_type == "video":
+        data.update({"media_type": "REELS", "video_url": media_url})
+        if cover_path and cover_path.exists():
+            try:
+                cover_url = _upload_temp_media(cover_path)
+                data["cover_url"] = cover_url
+                data["thumb_offset"] = 1
+            except Exception as exc:  # noqa: BLE001
+                log.warning(f"Cover upload failed, continuing without: {exc}")
+        log.info("Creating Instagram reel container with hosted video URL...")
+    else:
+        data["image_url"] = media_url
+        log.info("Creating Instagram media container with hosted image URL...")
+
+    resp = requests.post(endpoint, data=data, timeout=180)
     _raise_for_response(resp)
     media_id = resp.json()["id"]
     log.info(f"✅ Media container created: {media_id}")
@@ -129,26 +156,34 @@ def _poll_status(media_id: str, *, access_token: str) -> str:
     return "pending"
 
 
-def post_feed(image_path: str, caption: str, headless: bool = True) -> Dict[str, Any]:  # noqa: ARG001
-    """Publish a photo to Instagram using the official Graph API.
+def post_feed(
+    media_path: str,
+    caption: str,
+    *,
+    media_type: str | None = None,
+    cover_path: str | None = None,
+    headless: bool = True,  # noqa: ARG001
+) -> Dict[str, Any]:
+    """Publish a photo or reel to Instagram using the official Graph API."""
 
-    Args:
-        image_path: Local filesystem path to the image to upload.
-        caption: Text caption for the post.
-        headless: Preserved for backwards compatibility; ignored by the API flow.
-
-    Returns:
-        Dictionary describing whether the publish attempt succeeded.
-    """
-
-    path = Path(image_path)
+    path = Path(media_path)
+    cover = Path(cover_path) if cover_path else None
     if not path.exists():
-        raise FileNotFoundError(f"Image not found: {path}")
+        raise FileNotFoundError(f"Media not found: {path}")
+
+    resolved_type = media_type or ("video" if path.suffix.lower() in {".mp4", ".mov"} else "image")
 
     access_token, account_id = _credentials()
 
     try:
-        media_id = _create_media_container(path, caption, access_token=access_token, account_id=account_id)
+        media_id = _create_media_container(
+            path,
+            caption,
+            access_token=access_token,
+            account_id=account_id,
+            media_type=resolved_type,
+            cover_path=cover,
+        )
 
         status = _poll_status(media_id, access_token=access_token)
         if status != "success":
@@ -172,7 +207,13 @@ def post_feed(image_path: str, caption: str, headless: bool = True) -> Dict[str,
         return {"status": "error", "error": "Network error communicating with Instagram."}
 
     detail = "Posted to feed successfully."
-    return {"status": "success", "detail": detail, "publish_id": publish_id, "creation_id": media_id}
+    return {
+        "status": "success",
+        "detail": detail,
+        "publish_id": publish_id,
+        "creation_id": media_id,
+        "media_type": resolved_type,
+    }
 
 
 if __name__ == "__main__":
