@@ -87,6 +87,25 @@
     "expansion": ["Virtual podcast", "VTuber model", "AI collaborations"],
     "monetization": ["Brand deals", "NFTs", "Digital meetups", "Merch drops"]
   },
+  "storytelling": {
+    "home_city": "Shanghai",
+    "weekly_patterns": [
+      "Café drifting through the Former French Concession",
+      "Metro rides on Line 2 and Line 10 with headphones and half-finished notes",
+      "Night walks along Suzhou Creek and the Bund in humid neon air",
+      "Study sessions with Chinese vocab cards tucked into tote bags",
+      "Escaping rain by people-watching inside malls like Taikoo Li and K11"
+    ],
+    "emotional_texture": ["quiet ambition", "soft melancholy", "hopeful curiosity"],
+    "default_cadence": "1–2 narrative posts per day, reels first, no spam",
+    "locations_focus": ["Fuxing Park", "Tianzifang", "Xintiandi", "Jing'an Temple", "Wukang Road", "M50", "Lujiazui"],
+    "creative_rules": [
+      "Every caption should hint at a bigger weekly story arc",
+      "Prefer motion and reels over static selfies",
+      "Reference real Shanghai textures: metro chimes, plane trees, humidity, distant horns",
+      "Show emotional continuity between posts, even when outfits change"
+    ]
+  },
   "emotional_layer": {
     "symbol": "Sakura petals on digital screens",
     "themes": ["Connection through technology", "Authenticity in a synthetic world"],

@@ -5,7 +5,7 @@ from pathlib import Path
 from core.logger import get_logger
 from generators.captioner import generate_caption
 from generators.idea_generator import generate_idea
-from generators.image_gen import generate_image
+from generators.image_gen import create_motion_clip, generate_image
 from utils.persona_cache import get_persona
 from poster.instagram_poster import post_feed
 
@@ -42,10 +42,16 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
     )
     log.info(f"📍 Location: {location_line}")
 
-    # Step 2: Generate single image ✅ pass `place`
+    # Step 2: Generate imagery (still + reel motion by default)
     log.info("🎨 Generating image...")
     img_path = generate_image(persona_name, idea, place)
     log.info(f"🖼️ Image generated → {img_path}")
+
+    clip_path = create_motion_clip(img_path)
+    media_path = clip_path or img_path
+    media_type = "video" if clip_path else "image"
+    if clip_path:
+        log.info(f"🎞️ Reel-first asset prepared → {clip_path}")
 
     # Step 3: Generate caption (already passes `place`, keep as is)
     log.info("📝 Generating caption...")
@@ -56,7 +62,13 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
     if auto_post:
         log.info("📲 Uploading to Instagram...")
         try:
-            result = post_feed(img_path, caption, headless=headless)
+            result = post_feed(
+                media_path,
+                caption,
+                media_type=media_type,
+                cover_path=img_path if clip_path else None,
+                headless=headless,
+            )
             if result.get("status") == "success":
                 log.info(f"✅ Posted successfully → {result}")
             else:
@@ -75,7 +87,7 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
                 f"Idea: {idea}\n\n"
                 f"Location: {location_line}\n\n"
                 f"Caption:\n{caption}\n\n"
-                f"Image:\n{img_path}",
+                f"Media:\n{media_path} ({media_type})",
                 encoding="utf-8",
             )
             log.info(f"🗂️ Preview saved → {meta_path}")
@@ -90,6 +102,8 @@ def run_post_cycle(persona_name: str, auto_post: bool = False, headless: bool = 
         "place": place,
         "caption": caption,
         "image": img_path,
+        "media_path": media_path,
+        "media_type": media_type,
         "posted": auto_post,
     }
 

@@ -9,6 +9,7 @@ from openai import OpenAI
 from core.config import Config
 from core.logger import get_logger
 from utils.persona_cache import get_persona
+from generators.idea_generator import get_scene_memory_snapshot
 
 log = get_logger("Captioner")
 
@@ -22,8 +23,8 @@ if Config.OPENAI_API_KEY:
 
 
 def _mock(persona, idea):
-    endings = ["#ShanghaiLife", "#OOTD", "#CityDiaries"]
-    return f"{idea.capitalize()} 💛 {random.choice(endings)}"
+    endings = ["#ShanghaiLife", "#CityDiaries", "#RinInShanghai"]
+    return f"{idea.capitalize()} — keeping it gentle today. {random.choice(endings)}"
 
 
 def generate_caption(persona_name: str, idea: str, place=None) -> str:
@@ -37,20 +38,29 @@ def generate_caption(persona_name: str, idea: str, place=None) -> str:
     if not client:
         return _mock(persona, idea)
 
+    arc = get_scene_memory_snapshot()
+    location_line = (place or {}).get("name", "Shanghai")
+    mood = (place or {}).get("arc_mood") or arc.get("current_mood") or "calm"
+    beat = (place or {}).get("arc_beat") or arc.get("beat") or "daily note"
+
     sys = (
-        "You are a female lifestyle influencer in Shanghai. "
-        "Write short, casual, real captions. No metaphors."
+        "You are Rin, a soft-spoken Shanghai digital girl. "
+        "Your captions feel like diary fragments: grounded, sincere, sometimes slightly melancholic but hopeful. "
+        "Stay concise, in English with occasional simple Chinese phrases."
     )
 
     usr = (
-        f"Recent captions:\n{prev}\n\n"
+        f"Recent captions to avoid repeating tone:\n{prev}\n\n"
         f"Idea: {idea}\n"
-        f"Location: {place.get('name','') if place else ''}\n"
+        f"Location: {location_line}\n"
+        f"Arc: {arc.get('arc')} | Beat: {beat} | Mood: {mood}\n"
+        "Write 1-2 short lines that show what she notices and how she feels.\n"
         "Rules:\n"
-        "- 1–2 lines max\n"
-        "- No poetic language\n"
-        "- Max 3 emojis\n"
-        "- End with 2–3 natural hashtags\n"
+        "- Keep it intimate and cinematic but not flowery.\n"
+        "- Include a small introspective thought about Shanghai (streets, weather, metro, light).\n"
+        "- Use up to 3 emojis maximum, if any.\n"
+        "- End with 2-3 natural hashtags mixing English and light pinyin (no spam).\n"
+        "- Never start with 'Good morning' or generic greetings.\n"
     )
 
     retries = 3

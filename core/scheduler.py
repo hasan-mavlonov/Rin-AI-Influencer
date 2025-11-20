@@ -1,28 +1,34 @@
-"""Coordinate background scheduling for automated post cycles."""
-# Centralizes scheduling helpers so CLI wrappers can stay lightweight.
+"""Coordinate background scheduling for automated post cycles.
+
+This scheduler now favors one deeply crafted reel per day with an optional
+second post when the storyline benefits from an extra beat. Timing adapts to
+Shanghai daily rhythms and Rin's current narrative arc.
+"""
 
 import random
 import time
 from datetime import datetime, timedelta
+from typing import Dict, List, Tuple
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
 
 from core.logger import get_logger
+from personas.loader import load_recent_posts
+from generators.idea_generator import get_scene_memory_snapshot
 from run_post_cycle import run_post_cycle
 
 log = get_logger("DynamicScheduler")
 
-# Default configuration for daily scheduling windows.
+# Default configuration for daily scheduling windows (local Shanghai time)
 TIMEZONES = "Asia/Shanghai"
-WINDOWS = {
-    "morning": (8, 12),
-    "afternoon": (12, 17),
-    "evening": (17, 23),
+WINDOWS: Dict[str, Tuple[int, int]] = {
+    "sunrise": (7, 10),
+    "late_morning": (10, 12),
+    "afternoon": (13, 16),
+    "evening": (18, 21),
+    "night": (21, 23),
 }
-
-# Post count per day (3 = morning/afternoon/evening)
-DAILY_POSTS = 3
 
 
 def _random_time_between(start_hour: int, end_hour: int) -> datetime:
@@ -31,9 +37,104 @@ def _random_time_between(start_hour: int, end_hour: int) -> datetime:
     now = datetime.now()
     start = now.replace(hour=start_hour, minute=0, second=0, microsecond=0)
     end = now.replace(hour=end_hour, minute=0, second=0, microsecond=0)
-    delta = (end - start).seconds
+    delta = max(1, int((end - start).total_seconds()))
     rand_seconds = random.randint(0, delta)
     return start + timedelta(seconds=rand_seconds)
+
+
+def _engagement_hint(recent_posts: List[dict]) -> float:
+    """Estimate engagement to decide whether an extra post is worth it."""
+
+    if not recent_posts:
+        return 0.5
+
+    scores = []
+    for p in recent_posts:
+        metrics = p.get("metrics") or {}
+        likes = metrics.get("likes") or p.get("likes", 0)
+        comments = metrics.get("comments") or p.get("comments", 0)
+        followers = metrics.get("followers", metrics.get("followers_at_post", 1)) or 1
+        scores.append((likes + comments * 2) / max(followers, 1))
+
+    if not scores:
+        return 0.4
+
+    avg = sum(scores) / len(scores)
+    return max(0.1, min(avg * 3, 0.9))
+
+
+def _recent_hours_since_last_post(recent_posts: List[dict]) -> float:
+    if not recent_posts:
+        return 999
+    try:
+        latest = recent_posts[0].get("created_at") or recent_posts[0].get("timestamp")
+        if latest:
+            if isinstance(latest, str):
+                latest_dt = datetime.fromisoformat(latest.replace("Z", "+00:00"))
+            else:
+                latest_dt = latest
+            delta = datetime.now(latest_dt.tzinfo) - latest_dt
+            return delta.total_seconds() / 3600
+    except Exception:
+        return 999
+    return 999
+
+
+def _decide_post_count(recent_posts: List[dict]) -> int:
+    """Choose 1–2 posts per day based on rhythm and engagement."""
+
+    engagement = _engagement_hint(recent_posts)
+    hours_since = _recent_hours_since_last_post(recent_posts)
+
+    # Default to a single, strong post. Add a second slot if audience is warm
+    # and Rin hasn't posted in a while.
+    if hours_since > 28 and engagement > 0.35:
+        return 2
+    if engagement > 0.55 and hours_since > 18:
+        return 2
+    if random.random() < 0.15:  # occasional bonus reel
+        return 2
+    return 1
+
+
+def _preferred_windows(arc_snapshot: dict) -> List[str]:
+    """Return time-window labels that match the current storyline mood."""
+
+    mood = (arc_snapshot or {}).get("current_mood", "")
+    beat = (arc_snapshot or {}).get("beat", "")
+    if "night" in beat or mood in {"reflective", "restless"}:
+        return ["evening", "night"]
+    if "study" in beat or mood in {"focused", "hopeful"}:
+        return ["sunrise", "late_morning", "afternoon"]
+    if mood in {"playful", "adventurous"}:
+        return ["late_morning", "afternoon", "evening"]
+    return ["late_morning", "evening"]
+
+
+def _choose_windows(count: int, arc_snapshot: dict) -> List[Tuple[str, Tuple[int, int]]]:
+    candidates = list(WINDOWS.items())
+    priority = _preferred_windows(arc_snapshot)
+
+    sorted_candidates = sorted(
+        candidates,
+        key=lambda item: priority.index(item[0]) if item[0] in priority else len(priority),
+    )
+
+    # Ensure variety while following preference order
+    selected = []
+    for name, window in sorted_candidates:
+        if len(selected) >= count:
+            break
+        selected.append((name, window))
+
+    # If priority windows are exhausted, fill with random remaining unique slots
+    while len(selected) < count:
+        remaining = [c for c in candidates if c not in selected]
+        if not remaining:
+            break
+        selected.append(random.choice(remaining))
+
+    return selected
 
 
 def _schedule_post(scheduler: BackgroundScheduler, post_time: datetime, label: str) -> None:
@@ -54,16 +155,24 @@ def _schedule_post(scheduler: BackgroundScheduler, post_time: datetime, label: s
 
 
 def plan_day(scheduler: BackgroundScheduler) -> None:
-    """Plan today's posts dynamically by sampling from configured windows."""
+    """Plan today's posts with a narrative-first cadence (1–2 posts)."""
 
-    log.info("🌞 Rin is planning her posts for today...")
-    chosen_windows = list(WINDOWS.items())[:DAILY_POSTS]
+    log.info("🌞 Rin is planning her Shanghai story beats for today...")
+    recent_posts = load_recent_posts("rin", limit=6)
+    arc_snapshot = get_scene_memory_snapshot()
+    daily_posts = _decide_post_count(recent_posts)
 
-    for label, (start_h, end_h) in chosen_windows:
+    windows = _choose_windows(daily_posts, arc_snapshot)
+
+    for label, (start_h, end_h) in windows:
         post_time = _random_time_between(start_h, end_h)
         _schedule_post(scheduler, post_time, label)
 
-    log.info("🪄 Daily plan complete — waiting for next cycle.")
+    log.info(
+        "🪄 Daily plan complete — %s post(s) scheduled with arc '%s'.",
+        daily_posts,
+        (arc_snapshot or {}).get("arc", "unknown"),
+    )
 
 
 def start_dynamic_scheduler() -> None:

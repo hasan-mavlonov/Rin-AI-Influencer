@@ -2,9 +2,11 @@ import io
 import json
 import time
 from pathlib import Path
-from PIL import Image, ImageEnhance
-from typing import Optional
 from functools import lru_cache
+from typing import Optional
+
+import numpy as np
+from PIL import Image, ImageEnhance
 from google import genai
 
 from core.config import Config
@@ -537,3 +539,50 @@ Small natural imperfections: {imperf}
     _apply_filter(out)
     log.info(f"Image saved → {out}")
     return str(out)
+
+
+def _motion_frames(img: Image.Image, steps: int = 72) -> list[np.ndarray]:
+    """Create gentle pan/zoom frames for a reel-like clip."""
+
+    frames: list[np.ndarray] = []
+    w, h = img.size
+    for i in range(steps):
+        progress = i / max(1, steps - 1)
+        zoom = 1 + 0.08 * progress
+        shift = int((progress - 0.5) * 0.06 * w)
+        crop_w = int(w / zoom)
+        crop_h = int(h / zoom)
+        left = max(0, min(w - crop_w, (w - crop_w) // 2 + shift))
+        top = max(0, (h - crop_h) // 2)
+        frame = img.crop((left, top, left + crop_w, top + crop_h)).resize((1080, 1350), Image.LANCZOS)
+        frames.append(np.array(frame))
+    return frames
+
+
+def create_motion_clip(still_path: str, duration: int = 8, fps: int = 12) -> Optional[str]:
+    """Generate a subtle motion clip from a still image for reels-first posting."""
+
+    try:
+        import imageio
+    except ImportError:
+        log.warning("imageio not installed; skipping reel rendering.")
+        return None
+
+    path = Path(still_path)
+    if not path.exists():
+        log.warning(f"Still image missing for motion clip: {path}")
+        return None
+
+    try:
+        img = Image.open(path).convert("RGB")
+        steps = max(12, duration * fps)
+        frames = _motion_frames(img, steps=steps)
+        video_path = path.with_suffix(".mp4")
+        with imageio.get_writer(video_path, fps=fps, codec="libx264", quality=8) as writer:
+            for frame in frames:
+                writer.append_data(frame)
+        log.info(f"🎞️ Motion clip rendered → {video_path}")
+        return str(video_path)
+    except Exception as exc:  # noqa: BLE001 - keep posting flow alive.
+        log.warning(f"Motion clip generation failed, falling back to photo: {exc}")
+        return None
