@@ -1,8 +1,90 @@
 {
-  "week_start": "2025-01-06",
-  "arc": "Cafe Drift Week",
-  "beat_index": 0,
-  "recent_locations": [],
-  "recent_moods": [],
-  "last_update": null
+    "week_start": "2025-11-17",
+    "arc": "Mall Weekends",
+    "beat_index": 1,
+    "recent_locations": [
+        "TX Huaihai"
+    ],
+    "recent_moods": [
+        "playful"
+    ],
+    "last_update": "2025-11-21T11:47:12.323280",
+    "escalator snacks friends": {
+        "keywords": [
+            "escalator",
+            "snacks",
+            "friends"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_escalator_snacks_friends_0.jpg",
+            "assets/images/references/ref_escalator_snacks_friends_1.jpg",
+            "assets/images/references/ref_escalator_snacks_friends_2.jpg"
+        ],
+        "last_used": "2025-11-21T03:47:13.182610"
+    },
+    "snacks art relax": {
+        "keywords": [
+            "snacks",
+            "art",
+            "relax"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_snacks_art_relax_0.jpg",
+            "assets/images/references/ref_snacks_art_relax_1.jpg",
+            "assets/images/references/ref_snacks_art_relax_2.jpg"
+        ],
+        "last_used": "2025-11-21T12:02:42.592644"
+    },
+    "window shopping artful displays urban escape": {
+        "keywords": [
+            "window shopping",
+            "artful displays",
+            "urban escape"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_window_shopping_artful_displays_urban_escape_0.jpg",
+            "assets/images/references/ref_window_shopping_artful_displays_urban_escape_1.jpg",
+            "assets/images/references/ref_window_shopping_artful_displays_urban_escape_2.jpg"
+        ],
+        "last_used": "2025-11-22T12:36:18.894316"
+    },
+    "window shopping art city buzz": {
+        "keywords": [
+            "window shopping",
+            "art",
+            "city buzz"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_window_shopping_art_city_buzz_0.jpg",
+            "assets/images/references/ref_window_shopping_art_city_buzz_1.jpg",
+            "assets/images/references/ref_window_shopping_art_city_buzz_2.jpg"
+        ],
+        "last_used": "2025-11-22T14:28:45.583460"
+    },
+    "fitness shopping snacks": {
+        "keywords": [
+            "fitness",
+            "shopping",
+            "snacks"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_fitness_shopping_snacks_0.jpg",
+            "assets/images/references/ref_fitness_shopping_snacks_1.jpg",
+            "assets/images/references/ref_fitness_shopping_snacks_2.jpg"
+        ],
+        "last_used": "2025-11-23T11:51:55.351062"
+    },
+    "k11 coffee window shopping": {
+        "keywords": [
+            "K11",
+            "coffee",
+            "window shopping"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_k11_coffee_window_shopping_0.jpg",
+            "assets/images/references/ref_k11_coffee_window_shopping_1.jpg",
+            "assets/images/references/ref_k11_coffee_window_shopping_2.jpg"
+        ],
+        "last_used": "2025-11-23T13:24:26.803183"
+    }
 }
