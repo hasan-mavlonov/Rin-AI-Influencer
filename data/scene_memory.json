@@ -20,7 +20,7 @@
             "assets/images/references/ref_escalator_snacks_friends_1.jpg",
             "assets/images/references/ref_escalator_snacks_friends_2.jpg"
         ],
-        "last_used": "2025-11-21T03:47:13.182610"
+        "last_used": "2025-11-25T23:04:19.596876"
     },
     "snacks art relax": {
         "keywords": [
@@ -86,5 +86,83 @@
             "assets/images/references/ref_k11_coffee_window_shopping_2.jpg"
         ],
         "last_used": "2025-11-23T13:24:26.803183"
+    },
+    "blue hour neon humidity": {
+        "keywords": [
+            "blue hour",
+            "neon",
+            "humidity"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_blue_hour_neon_humidity_0.jpg",
+            "assets/images/references/ref_blue_hour_neon_humidity_1.jpg",
+            "assets/images/references/ref_blue_hour_neon_humidity_2.jpg"
+        ],
+        "last_used": "2025-11-24T03:47:01.580893"
+    },
+    "vocab study outdoors": {
+        "keywords": [
+            "vocab",
+            "study",
+            "outdoors"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_vocab_study_outdoors_0.jpg",
+            "assets/images/references/ref_vocab_study_outdoors_1.jpg",
+            "assets/images/references/ref_vocab_study_outdoors_2.jpg"
+        ],
+        "last_used": "2025-11-24T10:44:02.330108"
+    },
+    "rush hour reflection urban life": {
+        "keywords": [
+            "rush hour",
+            "reflection",
+            "urban life"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_rush_hour_reflection_urban_life_0.jpg",
+            "assets/images/references/ref_rush_hour_reflection_urban_life_1.jpg",
+            "assets/images/references/ref_rush_hour_reflection_urban_life_2.jpg"
+        ],
+        "last_used": "2025-11-25T01:22:58.911518"
+    },
+    "quiet sunny cozy": {
+        "keywords": [
+            "quiet",
+            "sunny",
+            "cozy"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_quiet_sunny_cozy_0.jpg",
+            "assets/images/references/ref_quiet_sunny_cozy_1.jpg",
+            "assets/images/references/ref_quiet_sunny_cozy_2.jpg"
+        ],
+        "last_used": "2025-11-25T03:04:59.040352"
+    },
+    "neon water reflection": {
+        "keywords": [
+            "neon",
+            "water",
+            "reflection"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_neon_water_reflection_0.jpg",
+            "assets/images/references/ref_neon_water_reflection_1.jpg",
+            "assets/images/references/ref_neon_water_reflection_2.jpg"
+        ],
+        "last_used": "2025-11-26T03:55:11.090272"
+    },
+    "café morning light": {
+        "keywords": [
+            "café",
+            "morning",
+            "light"
+        ],
+        "photo_refs": [
+            "assets/images/references/ref_café_morning_light_0.jpg",
+            "assets/images/references/ref_café_morning_light_1.jpg",
+            "assets/images/references/ref_café_morning_light_2.jpg"
+        ],
+        "last_used": "2025-11-27T02:34:23.975685"
     }
 }
