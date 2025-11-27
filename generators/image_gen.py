@@ -13,6 +13,8 @@ from generators.prompt_manager import build_image_prompt
 from generators.photo_fetcher import download_reference_images
 from generators.camera_engine import get_camera_instructions
 from generators.variation_state import VariationState
+from inference.router import ScenePlan, render_scene
+from inference.sdxl_client import generate_sdxl_image
 
 log = get_logger("ImageGen")
 
@@ -20,6 +22,10 @@ REF_DIR = Path("personas/rin/examples")
 from google.genai.types import Part
 
 _REFERENCE_CACHE: dict[tuple[str, int], tuple[Path, ...]] = {}
+NEGATIVE_PROMPT = (
+    "text, watermarks, duplicated faces, distorted hands, extra limbs, glitch art, "
+    "overexposed lighting, dramatic shadows, oversaturated colors"
+)
 
 
 # ----------------------------
@@ -91,6 +97,19 @@ def _instagram_crop(img: Image.Image) -> Image.Image:
     top = (h - new_height) // 2
     bottom = top + new_height
     return img.crop((0, top, w, bottom))
+
+
+def _save_final_image(img: Image.Image, prefix: str = "rin") -> str:
+    img = _instagram_crop(img)
+    img = img.resize((1080, 1350), Image.LANCZOS)
+
+    out = Path("assets/images/generated") / f"{prefix}_{int(time.time())}.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    img.save(out)
+
+    _apply_filter(out)
+    log.info(f"Image saved → {out}")
+    return str(out)
 
 
 # ----------------------------
@@ -479,63 +498,78 @@ Small natural imperfections: {imperf}
     if camera_instructions:
         full_prompt += f"\nCamera direction: {camera_instructions}"
 
-    try:
-        client = _get_genai_client()
-    except Exception as exc:  # noqa: BLE001 - bubble up with clearer context.
-        log.error(f"Gemini client unavailable: {exc}")
-        raise
+    subject = (persona.get("id") or persona_name or "rin").lower()
+    requires_high_fidelity = subject == "rin"
+    plan = ScenePlan(
+        prompt=full_prompt,
+        negative_prompt=NEGATIVE_PROMPT,
+        steps=30,
+        guidance=7.5,
+        subject=subject,
+        fidelity="high" if requires_high_fidelity else "standard",
+        requires_high_fidelity=requires_high_fidelity,
+    )
 
-    persona_refs = _top_reference_images(REF_DIR, limit=3)
-
-    contents = [full_prompt]
-    for p in persona_refs:
-        ref_part = _upload_persona(client, p)
-        if ref_part is not None:
-            contents.append(ref_part)
-    for r in bg_refs:
-        bg_part = _as_part(Path(r))
-        if bg_part is not None:
-            contents.append(bg_part)
-
-    attempts = 2
-    last_error: Exception | None = None
-    response = None
-    for attempt in range(1, attempts + 1):
+    def render_with_gemini() -> str:
         try:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash-image",
-                contents=contents
-            )
-            break
-        except Exception as exc:  # noqa: BLE001 - capture SDK/network issues.
-            last_error = exc
-            log.warning(
-                "Gemini image attempt %s/%s failed: %s",
-                attempt,
-                attempts,
-                exc,
-            )
-            if attempt < attempts:
-                time.sleep(2)
+            client = _get_genai_client()
+        except Exception as exc:  # noqa: BLE001 - bubble up with clearer context.
+            log.error(f"Gemini client unavailable: {exc}")
+            raise
 
-    if response is None:
-        raise RuntimeError(f"Image generation failed: {last_error}")
+        persona_refs = _top_reference_images(REF_DIR, limit=3)
 
-    try:
-        part = next(p for p in response.parts if getattr(p, "inline_data", None))
-    except StopIteration as exc:
-        raise RuntimeError("Image generation response missing binary data.") from exc
-    img = Image.open(io.BytesIO(part.inline_data.data))
+        contents = [full_prompt]
+        for p in persona_refs:
+            ref_part = _upload_persona(client, p)
+            if ref_part is not None:
+                contents.append(ref_part)
+        for r in bg_refs:
+            bg_part = _as_part(Path(r))
+            if bg_part is not None:
+                contents.append(bg_part)
 
-    img = _instagram_crop(img)
-    img = img.resize((1080, 1350), Image.LANCZOS)
+        attempts = 2
+        last_error: Exception | None = None
+        response = None
+        for attempt in range(1, attempts + 1):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash-image",
+                    contents=contents
+                )
+                break
+            except Exception as exc:  # noqa: BLE001 - capture SDK/network issues.
+                last_error = exc
+                log.warning(
+                    "Gemini image attempt %s/%s failed: %s",
+                    attempt,
+                    attempts,
+                    exc,
+                )
+                if attempt < attempts:
+                    time.sleep(2)
 
-    out = Path("assets/images/generated") / f"rin_{int(time.time())}.png"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    img.save(out)
+        if response is None:
+            raise RuntimeError(f"Image generation failed: {last_error}")
 
-    _apply_filter(out)
-    log.info(f"Image saved → {out}")
-    return str(out)
+        try:
+            part = next(p for p in response.parts if getattr(p, "inline_data", None))
+        except StopIteration as exc:
+            raise RuntimeError("Image generation response missing binary data.") from exc
+        img = Image.open(io.BytesIO(part.inline_data.data))
+
+        return _save_final_image(img, prefix=subject)
+
+    def render_with_sdxl() -> str:
+        return generate_sdxl_image(
+            prompt=plan.prompt,
+            negative_prompt=plan.negative_prompt,
+            steps=plan.steps,
+            guidance=plan.guidance,
+            save_image=lambda image: _save_final_image(image, prefix=subject),
+        )
+
+    return render_scene(plan, render_with_gemini, render_with_sdxl)
 
 

@@ -14,6 +14,9 @@ class Config:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
+    SDXL_ENDPOINT = os.getenv("SDXL_ENDPOINT", "")
+    SDXL_API_KEY = os.getenv("SDXL_API_KEY", "")
+    SDXL_TIMEOUT = int(os.getenv("SDXL_TIMEOUT", "90"))
 
     # Instagram Graph API credentials
     INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
