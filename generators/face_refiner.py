@@ -79,7 +79,7 @@ def _build_square_box(
 
 def detect_and_crop_face(
     image: Image.Image, padding_ratio: float = 0.25, output_size: int = 640
-) -> tuple[Image.Image, tuple[int, int, int, int]]:
+) -> tuple[Image.Image, tuple[int, int, int, int], float]:
     """Detect and crop a square face region with padding.
 
     The SDXL pipeline must never see the full image; this function extracts a
@@ -101,6 +101,7 @@ def detect_and_crop_face(
     # Select the largest detected face to align with the main subject.
     x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
     img_w, img_h = image.size
+    visible_ratio = float((w * h) / float(img_w * img_h))
     left, top, right, bottom = _build_square_box(x, y, w, h, img_w, img_h, padding_ratio)
 
     cropped = image.crop((left, top, right, bottom))
@@ -109,7 +110,7 @@ def detect_and_crop_face(
         "Face crop prepared",
         extra={"box": (left, top, right, bottom), "output_size": output_size},
     )
-    return resized_crop, (left, top, right, bottom)
+    return resized_crop, (left, top, right, bottom), visible_ratio
 
 
 @lru_cache(maxsize=1)
@@ -160,6 +161,8 @@ def refine_face_with_sdxl(
         device: Optional torch device. Defaults to GPU when available.
         base_model: SDXL base model identifier. Do not replace SDXL.
     """
+
+    print("[FaceRefiner] Face refinement started")
 
     if face_image.size[0] != face_image.size[1]:
         raise FaceRefinementError("Face image must be square before refinement.")
