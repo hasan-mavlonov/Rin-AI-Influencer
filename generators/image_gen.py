@@ -13,6 +13,12 @@ from generators.prompt_manager import build_image_prompt
 from generators.photo_fetcher import download_reference_images
 from generators.camera_engine import get_camera_instructions
 from generators.variation_state import VariationState
+from generators.face_refiner import (
+    FaceRefinementError,
+    blend_face_back,
+    detect_and_crop_face,
+    refine_face_with_sdxl,
+)
 
 log = get_logger("ImageGen")
 
@@ -91,6 +97,52 @@ def _instagram_crop(img: Image.Image) -> Image.Image:
     top = (h - new_height) // 2
     bottom = top + new_height
     return img.crop((0, top, w, bottom))
+
+
+def _refine_face_pipeline(base_image: Image.Image, prompt: str) -> Image.Image:
+    """Run SDXL/LoRA face-only refinement with occlusion safeguards."""
+
+    try:
+        face_crop, crop_region, visible_ratio = detect_and_crop_face(base_image)
+    except FaceRefinementError as exc:
+        log.info(f"Face refinement skipped: {exc}")
+        return base_image
+
+    # When phones or hands cover large portions of the face, keep strength low or skip.
+    if visible_ratio < 0.08:
+        log.info(
+            "Face refinement skipped: visible face area too small (ratio=%.3f)",
+            visible_ratio,
+        )
+        return base_image
+
+    strength = 0.45
+    if visible_ratio < 0.15:
+        strength = 0.35
+    elif visible_ratio < 0.22:
+        strength = 0.4
+
+    guarded_prompt = (
+        f"{prompt}\n"
+        "Preserve the original pose and lighting. Do not invent hidden facial regions;"
+        " only enhance visible features."
+    )
+
+    try:
+        refined_face = refine_face_with_sdxl(
+            face_crop,
+            prompt=guarded_prompt,
+            strength=strength,
+            guidance_scale=5.0,
+        )
+    except FaceRefinementError as exc:
+        log.info(f"Face refinement skipped: {exc}")
+        return base_image
+    except Exception as exc:  # noqa: BLE001 - inference/backends raise varied errors
+        log.warning(f"Face refinement failed: {exc}")
+        return base_image
+
+    return blend_face_back(base_image, refined_face, crop_region)
 
 
 # ----------------------------
@@ -527,6 +579,7 @@ Small natural imperfections: {imperf}
         raise RuntimeError("Image generation response missing binary data.") from exc
     img = Image.open(io.BytesIO(part.inline_data.data))
 
+    img = _refine_face_pipeline(img, full_prompt)
     img = _instagram_crop(img)
     img = img.resize((1080, 1350), Image.LANCZOS)
 
