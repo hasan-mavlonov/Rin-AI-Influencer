@@ -1,170 +1,24 @@
 {
-    "week_start": "2025-11-17",
-    "arc": "Mall Weekends",
-    "beat_index": 1,
+    "week_start": "2025-12-08",
+    "arc": "Study Chinese Week",
+    "beat_index": 7,
     "recent_locations": [
-        "TX Huaihai"
+        "Sinan Mansions library café",
+        "Sinan Mansions library café",
+        "Sinan Mansions library café",
+        "Sinan Mansions library café",
+        "Shanghai Metro",
+        "Sinan Mansions library café"
     ],
     "recent_moods": [
-        "playful"
+        "tired",
+        "focused",
+        "hopeful",
+        "determined",
+        "tired",
+        "focused"
     ],
-    "last_update": "2025-11-21T11:47:12.323280",
-    "escalator snacks friends": {
-        "keywords": [
-            "escalator",
-            "snacks",
-            "friends"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_escalator_snacks_friends_0.jpg",
-            "assets/images/references/ref_escalator_snacks_friends_1.jpg",
-            "assets/images/references/ref_escalator_snacks_friends_2.jpg"
-        ],
-        "last_used": "2025-12-12T02:08:03.202475"
-    },
-    "snacks art relax": {
-        "keywords": [
-            "snacks",
-            "art",
-            "relax"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_snacks_art_relax_0.jpg",
-            "assets/images/references/ref_snacks_art_relax_1.jpg",
-            "assets/images/references/ref_snacks_art_relax_2.jpg"
-        ],
-        "last_used": "2025-11-21T12:02:42.592644"
-    },
-    "window shopping artful displays urban escape": {
-        "keywords": [
-            "window shopping",
-            "artful displays",
-            "urban escape"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_window_shopping_artful_displays_urban_escape_0.jpg",
-            "assets/images/references/ref_window_shopping_artful_displays_urban_escape_1.jpg",
-            "assets/images/references/ref_window_shopping_artful_displays_urban_escape_2.jpg"
-        ],
-        "last_used": "2025-11-22T12:36:18.894316"
-    },
-    "window shopping art city buzz": {
-        "keywords": [
-            "window shopping",
-            "art",
-            "city buzz"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_window_shopping_art_city_buzz_0.jpg",
-            "assets/images/references/ref_window_shopping_art_city_buzz_1.jpg",
-            "assets/images/references/ref_window_shopping_art_city_buzz_2.jpg"
-        ],
-        "last_used": "2025-11-22T14:28:45.583460"
-    },
-    "fitness shopping snacks": {
-        "keywords": [
-            "fitness",
-            "shopping",
-            "snacks"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_fitness_shopping_snacks_0.jpg",
-            "assets/images/references/ref_fitness_shopping_snacks_1.jpg",
-            "assets/images/references/ref_fitness_shopping_snacks_2.jpg"
-        ],
-        "last_used": "2025-11-23T11:51:55.351062"
-    },
-    "k11 coffee window shopping": {
-        "keywords": [
-            "K11",
-            "coffee",
-            "window shopping"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_k11_coffee_window_shopping_0.jpg",
-            "assets/images/references/ref_k11_coffee_window_shopping_1.jpg",
-            "assets/images/references/ref_k11_coffee_window_shopping_2.jpg"
-        ],
-        "last_used": "2025-11-23T13:24:26.803183"
-    },
-    "blue hour neon humidity": {
-        "keywords": [
-            "blue hour",
-            "neon",
-            "humidity"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_blue_hour_neon_humidity_0.jpg",
-            "assets/images/references/ref_blue_hour_neon_humidity_1.jpg",
-            "assets/images/references/ref_blue_hour_neon_humidity_2.jpg"
-        ],
-        "last_used": "2025-12-03T00:02:11.261682"
-    },
-    "vocab study outdoors": {
-        "keywords": [
-            "vocab",
-            "study",
-            "outdoors"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_vocab_study_outdoors_0.jpg",
-            "assets/images/references/ref_vocab_study_outdoors_1.jpg",
-            "assets/images/references/ref_vocab_study_outdoors_2.jpg"
-        ],
-        "last_used": "2025-12-13T02:30:33.016195"
-    },
-    "rush hour reflection urban life": {
-        "keywords": [
-            "rush hour",
-            "reflection",
-            "urban life"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_rush_hour_reflection_urban_life_0.jpg",
-            "assets/images/references/ref_rush_hour_reflection_urban_life_1.jpg",
-            "assets/images/references/ref_rush_hour_reflection_urban_life_2.jpg"
-        ],
-        "last_used": "2025-11-25T01:22:58.911518"
-    },
-    "quiet sunny cozy": {
-        "keywords": [
-            "quiet",
-            "sunny",
-            "cozy"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_quiet_sunny_cozy_0.jpg",
-            "assets/images/references/ref_quiet_sunny_cozy_1.jpg",
-            "assets/images/references/ref_quiet_sunny_cozy_2.jpg"
-        ],
-        "last_used": "2025-12-11T11:44:02.070950"
-    },
-    "neon water reflection": {
-        "keywords": [
-            "neon",
-            "water",
-            "reflection"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_neon_water_reflection_0.jpg",
-            "assets/images/references/ref_neon_water_reflection_1.jpg",
-            "assets/images/references/ref_neon_water_reflection_2.jpg"
-        ],
-        "last_used": "2025-12-01T23:09:00.983902"
-    },
-    "café morning light": {
-        "keywords": [
-            "café",
-            "morning",
-            "light"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_café_morning_light_0.jpg",
-            "assets/images/references/ref_café_morning_light_1.jpg",
-            "assets/images/references/ref_café_morning_light_2.jpg"
-        ],
-        "last_used": "2025-12-08T02:27:51.132740"
-    },
+    "last_update": "2025-12-13T18:44:27.181267",
     "study café vocab": {
         "keywords": [
             "study",
@@ -176,175 +30,45 @@
             "assets/images/references/ref_study_café_vocab_1.jpg",
             "assets/images/references/ref_study_café_vocab_2.jpg"
         ],
-        "last_used": "2025-12-06T02:37:20.442610"
+        "last_used": "2025-12-13T10:34:56.894828"
     },
-    "morning crowd hustle": {
-        "keywords": [
-            "morning",
-            "crowd",
-            "hustle"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_morning_crowd_hustle_0.jpg",
-            "assets/images/references/ref_morning_crowd_hustle_1.jpg",
-            "assets/images/references/ref_morning_crowd_hustle_2.jpg"
-        ],
-        "last_used": "2025-12-07T14:29:19.761816"
-    },
-    "reflection neon cityscape": {
-        "keywords": [
-            "reflection",
-            "neon",
-            "cityscape"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_reflection_neon_cityscape_0.jpg",
-            "assets/images/references/ref_reflection_neon_cityscape_1.jpg",
-            "assets/images/references/ref_reflection_neon_cityscape_2.jpg"
-        ],
-        "last_used": "2025-11-30T14:45:41.129838"
-    },
-    "neon humidity melancholy": {
-        "keywords": [
-            "neon",
-            "humidity",
-            "melancholy"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_neon_humidity_melancholy_0.jpg",
-            "assets/images/references/ref_neon_humidity_melancholy_1.jpg",
-            "assets/images/references/ref_neon_humidity_melancholy_2.jpg"
-        ],
-        "last_used": "2025-11-29T10:57:58.690971"
-    },
-    "cozy morning coffee": {
-        "keywords": [
-            "cozy",
-            "morning",
-            "coffee"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_cozy_morning_coffee_0.jpg",
-            "assets/images/references/ref_cozy_morning_coffee_1.jpg",
-            "assets/images/references/ref_cozy_morning_coffee_2.jpg"
-        ],
-        "last_used": "2025-12-05T03:42:22.683703"
-    },
-    "commuters neon soft light": {
-        "keywords": [
-            "commuters",
-            "neon",
-            "soft light"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_commuters_neon_soft_light_0.jpg",
-            "assets/images/references/ref_commuters_neon_soft_light_1.jpg",
-            "assets/images/references/ref_commuters_neon_soft_light_2.jpg"
-        ],
-        "last_used": "2025-11-30T11:34:01.144833"
-    },
-    "crowd reflective movement": {
-        "keywords": [
-            "crowd",
-            "reflective",
-            "movement"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_crowd_reflective_movement_0.jpg",
-            "assets/images/references/ref_crowd_reflective_movement_1.jpg",
-            "assets/images/references/ref_crowd_reflective_movement_2.jpg"
-        ],
-        "last_used": "2025-12-03T03:20:22.543714"
-    },
-    "escalator coffee morning": {
-        "keywords": [
-            "escalator",
-            "coffee",
-            "morning"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_escalator_coffee_morning_0.jpg",
-            "assets/images/references/ref_escalator_coffee_morning_1.jpg",
-            "assets/images/references/ref_escalator_coffee_morning_2.jpg"
-        ],
-        "last_used": "2025-12-12T10:17:06.397039"
-    },
-    "commute style crowd": {
+    "commute learning flashcards": {
         "keywords": [
             "commute",
-            "style",
-            "crowd"
+            "learning",
+            "flashcards"
         ],
         "photo_refs": [
-            "assets/images/references/ref_commute_style_crowd_0.jpg",
-            "assets/images/references/ref_commute_style_crowd_1.jpg",
-            "assets/images/references/ref_commute_style_crowd_2.jpg"
+            "assets/images/references/ref_commute_learning_flashcards_0.jpg",
+            "assets/images/references/ref_commute_learning_flashcards_1.jpg",
+            "assets/images/references/ref_commute_learning_flashcards_2.jpg"
         ],
-        "last_used": "2025-12-04T12:14:42.097562"
+        "last_used": "2025-12-13T10:21:54.050007"
     },
-    "crowd neon anticipation": {
+    "coffee vocab study": {
         "keywords": [
-            "crowd",
-            "neon",
-            "anticipation"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_crowd_neon_anticipation_0.jpg",
-            "assets/images/references/ref_crowd_neon_anticipation_1.jpg",
-            "assets/images/references/ref_crowd_neon_anticipation_2.jpg"
-        ],
-        "last_used": "2025-12-05T01:46:39.767272"
-    },
-    "escalator light display playful": {
-        "keywords": [
-            "escalator",
-            "light display",
-            "playful"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_escalator_light_display_playful_0.jpg",
-            "assets/images/references/ref_escalator_light_display_playful_1.jpg",
-            "assets/images/references/ref_escalator_light_display_playful_2.jpg"
-        ],
-        "last_used": "2025-12-08T01:24:27.481243"
-    },
-    "study vocab community": {
-        "keywords": [
-            "study",
+            "coffee",
             "vocab",
-            "community"
+            "study"
         ],
         "photo_refs": [
-            "assets/images/references/ref_study_vocab_community_0.jpg",
-            "assets/images/references/ref_study_vocab_community_1.jpg",
-            "assets/images/references/ref_study_vocab_community_2.jpg"
+            "assets/images/references/ref_coffee_vocab_study_0.jpg",
+            "assets/images/references/ref_coffee_vocab_study_1.jpg",
+            "assets/images/references/ref_coffee_vocab_study_2.jpg"
         ],
-        "last_used": "2025-12-08T23:30:03.155514"
+        "last_used": "2025-12-13T10:39:26.375885"
     },
-    "crowd neon commute": {
+    "café study shanghai": {
         "keywords": [
-            "crowd",
-            "neon",
-            "commute"
+            "café",
+            "study",
+            "Shanghai"
         ],
         "photo_refs": [
-            "assets/images/references/ref_crowd_neon_commute_0.jpg",
-            "assets/images/references/ref_crowd_neon_commute_1.jpg",
-            "assets/images/references/ref_crowd_neon_commute_2.jpg"
+            "assets/images/references/ref_café_study_shanghai_0.jpg",
+            "assets/images/references/ref_café_study_shanghai_1.jpg",
+            "assets/images/references/ref_café_study_shanghai_2.jpg"
         ],
-        "last_used": "2025-12-11T02:24:08.188658"
-    },
-    "quiet morning journaling": {
-        "keywords": [
-            "quiet",
-            "morning",
-            "journaling"
-        ],
-        "photo_refs": [
-            "assets/images/references/ref_quiet_morning_journaling_0.jpg",
-            "assets/images/references/ref_quiet_morning_journaling_1.jpg",
-            "assets/images/references/ref_quiet_morning_journaling_2.jpg"
-        ],
-        "last_used": "2025-12-10T01:57:36.538818"
+        "last_used": "2025-12-13T10:44:33.603386"
     }
 }

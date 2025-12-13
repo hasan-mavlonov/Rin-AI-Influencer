@@ -109,7 +109,7 @@ def _refine_face_pipeline(base_image: Image.Image, prompt: str) -> Image.Image:
         return base_image
 
     # When phones or hands cover large portions of the face, keep strength low or skip.
-    if visible_ratio < 0.08:
+    if visible_ratio < 0.11:
         log.info(
             "Face refinement skipped: visible face area too small (ratio=%.3f)",
             visible_ratio,
@@ -119,8 +119,6 @@ def _refine_face_pipeline(base_image: Image.Image, prompt: str) -> Image.Image:
     strength = 0.45
     if visible_ratio < 0.15:
         strength = 0.35
-    elif visible_ratio < 0.22:
-        strength = 0.4
 
     guarded_prompt = (
         f"{prompt}\n"
